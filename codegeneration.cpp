@@ -41,15 +41,69 @@ void CodeGenerator::visitCallNode(CallNode* node) {
 }
 
 void CodeGenerator::visitIfElseNode(IfElseNode* node) {
-    // WRITEME: Replace with code if necessary
+    
+    std::cout << "  #### If/Else" << std::endl;
+    node->visit_children(this);
+    std::cout << "  #pop the else statement list" << std::endl;
+    std::cout << "  pop %ecx" << std::endl;
+    std::cout << "  #pop the if statement list" << std::endl;
+    std::cout << "  pop %ebx" << std::endl;
+    std::cout << "  #pop the expression" << std::endl;
+    std::cout << "  pop %eax" << std::endl;
+
+    std::cout << "  #check if the statement is not false (0)" << std::endl;
+    std::cout << "  and %eax, 1" << std::endl;
+    std::cout << "  cmp %eax, 1" << std::endl;
+    std::cout << "  je ifTrue" << std::endl;
+    std::cout << "  #if the statment is false" << std::endl;
+    std::cout << "  #run every statment in %ecx" << std::endl;
+
+    std::cout << "  #if the statment is true" << std::endl;
+    std::cout << "  ifTrue:" << std::endl;
+    std::cout << "  #run every statment in %ebx" << std::endl;
 }
 
 void CodeGenerator::visitWhileNode(WhileNode* node) {
-    // WRITEME: Replace with code if necessary
+
+    std::cout << "  #### While" << std::endl;
+    node->visit_children(this);
+    std::cout << "  #pop the statement list" << std::endl;
+    std::cout << "  pop %ebx" << std::endl;
+    std::cout << "  #pop the expression" << std::endl;
+    std::cout << "  pop %eax" << std::endl;
+
+    std::cout << "  startLoop:" << std::endl;
+    std::cout << "  #check if the statement is true" << std::endl;
+    std::cout << "  and %eax, 1" << std::endl;
+    std::cout << "  cmp %eax, 1" << std::endl;
+    std::cout << "  jne endLoop" << std::endl;
+
+    std::cout << "  #run entire statement list" << std::endl;
+    std::cout << "  jmp startLoop"  << std::endl;
+
+    std::cout << "  endLoop:" << std::endl;
 }
 
 void CodeGenerator::visitPrintNode(PrintNode* node) {
-    // WRITEME: Replace with code if necessary
+    
+    std::cout << "  #### Do-While" << std::endl;
+    node->visit_children(this);
+    std::cout << "  #pop the statement list" << std::endl;
+    std::cout << "  pop %ebx" << std::endl;
+    std::cout << "  #pop the expression" << std::endl;
+    std::cout << "  pop %eax" << std::endl;
+
+    std::cout << "  startLoop:" << std::endl;
+    std::cout << "  #run entire statement list" << std::endl;
+
+    std::cout << "  #check if the statement is true" << std::endl;
+    std::cout << "  and %eax, 1" << std::endl;
+    std::cout << "  cmp %eax, 1" << std::endl;
+    std::cout << "  jne endLoop" << std::endl;
+
+    std::cout << "  jmp startLoop"  << std::endl;
+
+    std::cout << "  endLoop:" << std::endl;
 }
 
 void CodeGenerator::visitDoWhileNode(DoWhileNode* node) {
@@ -57,114 +111,138 @@ void CodeGenerator::visitDoWhileNode(DoWhileNode* node) {
 }
 
 void CodeGenerator::visitPlusNode(PlusNode* node) {
+
+    std::cout << "  #### Plus" << std::endl;
+
     node->visit_children(this);
-    std::cout << "  # Plus" << std::endl;
-    std::cout << "  pop %edx" << std::endl;
+
+    std::cout << "  pop %ebx" << std::endl;
     std::cout << "  pop %eax" << std::endl;
-    std::cout << "  add %edx, %eax" << std::endl;
+    std::cout << "  add %ebx, %eax" << std::endl;
     std::cout << "  push %eax" << std::endl;
-    pop %edx
+    /*
+    pop %ebx
     pop %eax
-    add %edx, %eax
+    add %ebx, %eax
     push %eax
+    */
 }
 
 void CodeGenerator::visitMinusNode(MinusNode* node) {
+
+    std::cout << "  #### Minus" << std::endl;
+
     node->visit_children(this);
-    std::cout << "  # Minus" << std::endl;
-    std::cout << "  pop %edx" << std::endl;
+
+    std::cout << "  pop %ebx" << std::endl;
     std::cout << "  pop %eax" << std::endl;
-    std::cout << "  sub %edx, %eax" << std::endl;
+    std::cout << "  sub %ebx, %eax" << std::endl;
     std::cout << "  push %eax" << std::endl;
-    pop %edx
-    pop %eax
-    sub %edx, %eax
-    push %eax
 }
 
 void CodeGenerator::visitTimesNode(TimesNode* node) {
+
+    std::cout << "  #### Times" << std::endl;
     node->visit_children(this);
-    std::cout << "  # Times" << std::endl;
-    std::cout << "  pop %edx" << std::endl;
+    std::cout << "  pop %ebx" << std::endl;
     std::cout << "  pop %eax" << std::endl;
-    std::cout << "  imul %edx, %eax" << std::endl;
+    std::cout << "  imul %ebx, %eax" << std::endl;
     std::cout << "  push %eax" << std::endl;
-    pop %edx
-    pop %eax
-    imul %edx, %eax
-    push %eax
 }
 
 void CodeGenerator::visitDivideNode(DivideNode* node) {
+
+    //ask the professor
+    std::cout << "  #### Divide" << std::endl;
     node->visit_children(this);
-    std::cout << "  # Divide" << std::endl;
     std::cout << "  pop %edx" << std::endl;
     std::cout << "  pop %eax" << std::endl;
-    std::cout << "  idiv %edx, %eax" << std::endl;
+    //std::cout << "  cdq" << std::endl;
+    std::cout << "  idiv %ebx" << std::endl;
     std::cout << "  push %eax" << std::endl;
-    pop %edx
-    pop %eax
-    idiv %edx, %eax
-    push %eax
 }
 
 void CodeGenerator::visitGreaterNode(GreaterNode* node) {
-    // WRITEME: Replace with code if necessary
+
+    std::cout << "  #### Greater" << std::endl;
+    node->visit_children(this);
+    std::cout << "  pop %ebx" << std::endl;
+    std::cout << "  pop %eax" << std::endl;
+    std::cout << "  comp %ebx, %eax" << std::endl;
+    std::cout << "  jge setGreater" << std::endl;
+    std::cout << "  push $0" << std::endl;
+    //how do we end this part without also pushing 1?
+
+    std::cout << "  setGreater:" << std::endl;
+    std::cout << "  push $1" << std::endl;
 }
 
 void CodeGenerator::visitGreaterEqualNode(GreaterEqualNode* node) {
-    // WRITEME: Replace with code if necessary
+
+    std::cout << "  #### GreaterEqual" << std::endl;
+    node->visit_children(this);
+    std::cout << "  pop %ebx" << std::endl;
+    std::cout << "  pop %eax" << std::endl;
+    std::cout << "  comp %ebx, %eax" << std::endl;
+    std::cout << "  jge setGreaterEqual" << std::endl;
+    std::cout << "  push $0" << std::endl;
+    //how do we end this part without also pushing 1?
+
+    std::cout << "  setGreaterEqual:" << std::endl;
+    std::cout << "  push $1" << std::endl;
 }
 
 void CodeGenerator::visitEqualNode(EqualNode* node) {
+
+    std::cout << "  #### Equal" << std::endl;
     node->visit_children(this);
-    std::cout << "  # Equal" << std::endl;
-    std::cout << "  pop %edx" << std::endl;
+    std::cout << "  pop %ebx" << std::endl;
     std::cout << "  pop %eax" << std::endl;
-    std::cout << "  beq %edx, %eax" << std::endl;
-    std::cout << "  push %eax" << std::endl;
-    pop %edx
-    pop %eax
-    comp %edx, %eax //both sides of the expression are equal
-    push %eax
+    std::cout << "  comp %ebx, %eax" << std::endl;
+    std::cout << "  je setEqual" << std::endl;
+    std::cout << "  push $0" << std::endl;
+    //how do we end this part without also pushing 1?
+
+    std::cout << "  setEqual:" << std::endl;
+    std::cout << "  push $1" << std::endl;
 }
 
 void CodeGenerator::visitAndNode(AndNode* node) {
+
+    std::cout << "  #### And" << std::endl;
     node->visit_children(this);
-    std::cout << "  # And" << std::endl;
-    std::cout << "  pop %edx" << std::endl;
+    std::cout << "  pop %ebx" << std::endl;
     std::cout << "  pop %eax" << std::endl;
-    std::cout << "  and %edx, %eax" << std::endl;
+    std::cout << "  and %ebx, %eax" << std::endl;
     std::cout << "  push %eax" << std::endl;
-    pop %edx
-    pop %eax
-    and %edx, %eax
-    push %eax
 }
 
 void CodeGenerator::visitOrNode(OrNode* node) {
+
+    std::cout << "  #### Or" << std::endl;
     node->visit_children(this);
-    std::cout << "  # Or" << std::endl;
-    std::cout << "  pop %edx" << std::endl;
+    std::cout << "  pop %ebx" << std::endl;
     std::cout << "  pop %eax" << std::endl;
-    std::cout << "  or %edx, %eax" << std::endl;
+    std::cout << "  or %ebx, %eax" << std::endl;
     std::cout << "  push %eax" << std::endl;
-    pop %edx
-    pop %eax
-    or %edx, %eax
-    push %eax
 }
 
 void CodeGenerator::visitNotNode(NotNode* node) {
-    pop %eax
-    not %eax
-    push %eax
+
+    std::cout << "  #### Not" << std::endl;
+    node->visit_children(this);
+    std::cout << "  pop %eax" << std::endl;
+    std::cout << "  not %eax" << std::endl;
+    std::cout << "  push %eax" << std::endl;
 }
 
 void CodeGenerator::visitNegationNode(NegationNode* node) {
-    pop %eax
-    neg %eax
-    push %eax
+    
+    std::cout << "  #### Negation" << std::endl;
+    node->visit_children(this);
+    std::cout << "  pop %eax" << std::endl;
+    std::cout << "  neg %eax" << std::endl;
+    std::cout << "  push %eax" << std::endl;
 }
 
 void CodeGenerator::visitMethodCallNode(MethodCallNode* node) {
