@@ -4,6 +4,8 @@
 // you will complete to generate the x86 assembly code. Not
 // all functions must have code, many may be left empty.
 
+
+
 void CodeGenerator::visitProgramNode(ProgramNode* node) {
     // WRITEME: Replace with code if necessary
 }
@@ -86,6 +88,15 @@ void CodeGenerator::visitWhileNode(WhileNode* node) {
 
 void CodeGenerator::visitPrintNode(PrintNode* node) {
     
+    std::cout << "  #### Print" << std::endl;
+    node->visit_children(this);
+    std::cout << "  #pop the expression" << std::endl;
+    std::cout << "  pop %eax" << std::endl;
+
+    std::cout << "  #print the expression" << std::endl;
+}
+
+void CodeGenerator::visitDoWhileNode(DoWhileNode* node) {
     std::cout << "  #### Do-While" << std::endl;
     node->visit_children(this);
     std::cout << "  #pop the statement list" << std::endl;
@@ -104,10 +115,6 @@ void CodeGenerator::visitPrintNode(PrintNode* node) {
     std::cout << "  jmp startLoop"  << std::endl;
 
     std::cout << "  endLoop:" << std::endl;
-}
-
-void CodeGenerator::visitDoWhileNode(DoWhileNode* node) {
-    // WRITEME: Replace with code if necessary
 }
 
 void CodeGenerator::visitPlusNode(PlusNode* node) {
@@ -246,29 +253,108 @@ void CodeGenerator::visitNegationNode(NegationNode* node) {
 }
 
 void CodeGenerator::visitMethodCallNode(MethodCallNode* node) {
-    // WRITEME: Replace with code if necessary
+
+    //VariableTable* variableTable = new VariableTable();
+    //VariableInfo variable;
+    //MethodInfo method;
+    std::string methodName;
+    if( node->identifier_2 )
+        methodName = node->identifier_2->name;
+    else
+        methodName = node->identifier_1->name;
+
+    std::cout << "  #### MethodCall" << std::endl;
+    //update current method info?
+    node->visit_children(this);
+    if( currentClassInfo.methods->find(methodName) )
+    {        
+        currentClassInfo.methods->at(methodName).offset;
+        std::cout << "  mov %ebp, %eax" << std::endl;
+        std::cout << "  add $offset, %eax" << std::endl;
+        std::cout << "  push %eax" << std::endl;
+    }
+    else
+    {
+        if( classTable->find(currentClassInfo.superClassName) )
+        { 
+            classInfo superClass = classTable->at(currentClassInfo.superClassName);
+            if( superClass.methods->find(methodName) )        
+            {
+                superClass.methods->at(methodName).offset;
+                std::cout << "mov %ebp, %eax" << std::endl;
+                std::cout << "add $offset, %eax" << std::endl;
+                std::cout << "push %eax" << std::endl;
+            }
+        }
+    }
 }
 
 void CodeGenerator::visitMemberAccessNode(MemberAccessNode* node) {
-    // WRITEME: Replace with code if necessary
+
+    VariableInfo variable;
+
+    std::cout << "  #### Variable" << std::endl;
+    node->visit_children(this);
+    if( currentClassInfo.members->find(variable) )
+    {        
+        currentClassInfo.members->at(variable).offset;
+        std::cout << "  mov %ebp, %eax" << std::endl;
+        std::cout << "  add $offset, %eax" << std::endl;
+        std::cout << "  push %eax" << std::endl;
+    }
+    else
+    {
+        if( classTable->find(currentClassInfo.superClassName) )
+        { 
+            classInfo superClass = classTable->at(currentClassInfo.superClassName);
+            if( superClass.members->find(variable) )        
+            {
+                superClass.members->at(variable).offset;
+                std::cout << "mov %ebp, %eax" << std::endl;
+                std::cout << "add $offset, %eax" << std::endl;
+                std::cout << "push %eax" << std::endl;
+            }
+        }
+    }
 }
 
 void CodeGenerator::visitVariableNode(VariableNode* node) {
-    // WRITEME: Replace with code if necessary
+    
+    VariableInfo variable;
+
+    std::cout << "  #### Variable" << std::endl;
+    node->visit_children(this);
+    if( currentMethodInfo.variables->find(variable) )
+    {        
+        currentMethodInfo.variables->at(variable).offset;
+        std::cout << "mov %ebp, %eax" << std::endl;
+        std::cout << "add $offset, %eax" << std::endl;
+        std::cout << "push %eax" << std::endl;
+    }
 }
 
 void CodeGenerator::visitIntegerLiteralNode(IntegerLiteralNode* node) {
-    // WRITEME: Replace with code if necessary
+
+    std::cout << "  #### IntLiteral" << std::endl;
+    node->visit_children(this);
+    std::cout << "  pop %eax" << std::endl;
+    std::cout << "  # get the integer value stored at this node" << std::endl;
+    std::cout << "  push %eax" << std::endl;
 }
 
 void CodeGenerator::visitBooleanLiteralNode(BooleanLiteralNode* node) {
-    // WRITEME: Replace with code if necessary
+    std::cout << "  #### BoolLiteral" << std::endl;
+    node->visit_children(this);
+    std::cout << "  pop %eax" << std::endl;
+    std::cout << "  # get 1 if true and 0 if false" << std::endl;
+    std::cout << "  push %eax" << std::endl;
 }
 
 void CodeGenerator::visitNewNode(NewNode* node) {
     // WRITEME: Replace with code if necessary
 }
 
+//starting here I don't think we write anything else
 void CodeGenerator::visitIntegerTypeNode(IntegerTypeNode* node) {
     // WRITEME: Replace with code if necessary
 }
