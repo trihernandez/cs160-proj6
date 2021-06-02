@@ -4,12 +4,16 @@
 // you will complete to generate the x86 assembly code. Not
 // all functions must have code, many may be left empty.
 
-
+//Clarifications on @269 and @270
 
 void CodeGenerator::visitProgramNode(ProgramNode* node) {
     
     std::cout << "  #### Program" << std::endl;
+    std::cout << "  .data" << std::endl;
+    std::cout << "  printstr: .asciz \"%d\n\"" << std::endl;
+    std::cout << "  .text" << std::endl;
     node->visit_children(this);
+    std::cout << "  ret" << std::endl;
 }
 
 void CodeGenerator::visitClassNode(ClassNode* node) {
@@ -21,6 +25,8 @@ void CodeGenerator::visitClassNode(ClassNode* node) {
 void CodeGenerator::visitMethodNode(MethodNode* node) {
 
     std::cout << "  #### Method" << std::endl;
+    std::cout << currentClassName << "_" << currentMethodName << ":" << std::endl;
+    std::cout << "  push %ebp" << std::endl;
     node->visit_children(this);
 }
 
@@ -108,10 +114,13 @@ void CodeGenerator::visitPrintNode(PrintNode* node) {
     
     std::cout << "  #### Print" << std::endl;
     node->visit_children(this);
-    std::cout << "  #pop the expression" << std::endl;
-    std::cout << "  pop %eax" << std::endl;
-
     std::cout << "  #print the expression" << std::endl;
+    std::cout << "  push $printstr" << std::endl;
+    std::cout << "  call printf" << std::endl;
+    std::cout << "  add $8, %esp" << std::endl;
+
+    std::cout << "  #pop the expression" << std::endl;
+    std::cout << "  pop %ebx" << std::endl;
 }
 
 void CodeGenerator::visitDoWhileNode(DoWhileNode* node) {
@@ -146,12 +155,6 @@ void CodeGenerator::visitPlusNode(PlusNode* node) {
     std::cout << "  pop %eax" << std::endl;
     std::cout << "  add %ebx, %eax" << std::endl;
     std::cout << "  push %eax" << std::endl;
-    /*
-    pop %ebx
-    pop %eax
-    add %ebx, %eax
-    push %eax
-    */
 }
 
 void CodeGenerator::visitMinusNode(MinusNode* node) {
@@ -276,16 +279,14 @@ void CodeGenerator::visitMethodCallNode(MethodCallNode* node) {
     //VariableTable* variableTable = new VariableTable();
     //VariableInfo variable;
     //MethodInfo method;
-    std::string methodName;
+    std::string methodName = node->identifier_1->name;
     if( node->identifier_2 )
         methodName = node->identifier_2->name;
-    else
-        methodName = node->identifier_1->name;
 
     std::cout << "  #### MethodCall" << std::endl;
     //update current method info?
     node->visit_children(this);
-    if( currentClassInfo.methods->find(methodName) )
+    if( currentClassInfo.methods->find(methodName) != currentClassInfo.methods->end() )
     {        
         currentClassInfo.methods->at(methodName).offset;
         std::cout << "  mov %ebp, %eax" << std::endl;
@@ -294,10 +295,10 @@ void CodeGenerator::visitMethodCallNode(MethodCallNode* node) {
     }
     else
     {
-        if( classTable->find(currentClassInfo.superClassName) )
+        if( classTable->find(currentClassInfo.superClassName) != classTable->end() )
         { 
-            classInfo superClass = classTable->at(currentClassInfo.superClassName);
-            if( superClass.methods->find(methodName) )        
+            ClassInfo superClass = classTable->at(currentClassInfo.superClassName);
+            if( superClass.methods->find(methodName) != superClass.methods->end()  )        
             {
                 superClass.methods->at(methodName).offset;
                 std::cout << "mov %ebp, %eax" << std::endl;
@@ -310,25 +311,28 @@ void CodeGenerator::visitMethodCallNode(MethodCallNode* node) {
 
 void CodeGenerator::visitMemberAccessNode(MemberAccessNode* node) {
 
-    VariableInfo variable;
+    //VariableInfo variable;
+    std::string classObjectName = node->identifier_1->name;
+    std::string classObjectMember = node->identifier_2->name;
 
-    std::cout << "  #### Variable" << std::endl;
+    std::cout << "  #### Member access" << std::endl;
+    std::cout << "  # Find class object (identifier 1) in declared objects" << std::endl;
     node->visit_children(this);
-    if( currentClassInfo.members->find(variable) )
+    if( currentClassInfo.members->find(classObjectMember) != currentClassInfo.members->end() )
     {        
-        currentClassInfo.members->at(variable).offset;
+        currentClassInfo.members->at(classObjectMember).offset;
         std::cout << "  mov %ebp, %eax" << std::endl;
         std::cout << "  add $offset, %eax" << std::endl;
         std::cout << "  push %eax" << std::endl;
     }
     else
     {
-        if( classTable->find(currentClassInfo.superClassName) )
+        if( classTable->find(currentClassInfo.superClassName) != classTable->end() )
         { 
-            classInfo superClass = classTable->at(currentClassInfo.superClassName);
-            if( superClass.members->find(variable) )        
+            ClassInfo superClass = classTable->at(currentClassInfo.superClassName);
+            if( superClass.members->find(classObjectMember) != superClass.members->end() )       
             {
-                superClass.members->at(variable).offset;
+                superClass.members->at(classObjectMember).offset;
                 std::cout << "mov %ebp, %eax" << std::endl;
                 std::cout << "add $offset, %eax" << std::endl;
                 std::cout << "push %eax" << std::endl;
@@ -339,13 +343,14 @@ void CodeGenerator::visitMemberAccessNode(MemberAccessNode* node) {
 
 void CodeGenerator::visitVariableNode(VariableNode* node) {
     
-    VariableInfo variable;
+    //VariableInfo variable;
+    std::string variable = node->identifier->name;
 
     std::cout << "  #### Variable" << std::endl;
     node->visit_children(this);
-    if( currentMethodInfo.variables->find(variable) )
+    if( currentMethodInfo.variables->find(variable) != currentMethodInfo.variables->end() )
     {        
-        currentMethodInfo.variables->at(variable).offset;
+        currentMethodInfo.variables->at(variable).offset();
         std::cout << "mov %ebp, %eax" << std::endl;
         std::cout << "add $offset, %eax" << std::endl;
         std::cout << "push %eax" << std::endl;
@@ -356,17 +361,15 @@ void CodeGenerator::visitIntegerLiteralNode(IntegerLiteralNode* node) {
 
     std::cout << "  #### IntLiteral" << std::endl;
     node->visit_children(this);
-    std::cout << "  pop %eax" << std::endl;
     std::cout << "  # get the integer value stored at this node" << std::endl;
-    std::cout << "  push %eax" << std::endl;
+    std::cout << "  push $" << node->integer->value << std::endl;
 }
 
 void CodeGenerator::visitBooleanLiteralNode(BooleanLiteralNode* node) {
     std::cout << "  #### BoolLiteral" << std::endl;
     node->visit_children(this);
-    std::cout << "  pop %eax" << std::endl;
     std::cout << "  # get 1 if true and 0 if false" << std::endl;
-    std::cout << "  push %eax" << std::endl;
+    std::cout << "  push $" << node->integer->value << std::endl;
 }
 
 void CodeGenerator::visitNewNode(NewNode* node) {
