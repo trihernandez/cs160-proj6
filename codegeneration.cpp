@@ -7,39 +7,57 @@
 
 
 void CodeGenerator::visitProgramNode(ProgramNode* node) {
-    // WRITEME: Replace with code if necessary
+    
+    std::cout << "  #### Program" << std::endl;
+    node->visit_children(this);
 }
 
 void CodeGenerator::visitClassNode(ClassNode* node) {
-    // WRITEME: Replace with code if necessary
+    
+    std::cout << "  #### Class" << std::endl;
+    node->visit_children(this);
 }
 
 void CodeGenerator::visitMethodNode(MethodNode* node) {
-    // WRITEME: Replace with code if necessary
+
+    std::cout << "  #### Method" << std::endl;
+    node->visit_children(this);
 }
 
 void CodeGenerator::visitMethodBodyNode(MethodBodyNode* node) {
-    // WRITEME: Replace with code if necessary
+
+    std::cout << "  #### MethodBody" << std::endl;
+    node->visit_children(this);
 }
 
 void CodeGenerator::visitParameterNode(ParameterNode* node) {
-    // WRITEME: Replace with code if necessary
+
+    std::cout << "  #### Parameter" << std::endl;
+    node->visit_children(this);
 }
 
 void CodeGenerator::visitDeclarationNode(DeclarationNode* node) {
-    // WRITEME: Replace with code if necessary
+
+    std::cout << "  #### Declaration" << std::endl;
+    node->visit_children(this);
 }
 
 void CodeGenerator::visitReturnStatementNode(ReturnStatementNode* node) {
-    // WRITEME: Replace with code if necessary
+
+    std::cout << "  #### ReturnStatement" << std::endl;
+    node->visit_children(this);
 }
 
 void CodeGenerator::visitAssignmentNode(AssignmentNode* node) {
-    // WRITEME: Replace with code if necessary
+
+    std::cout << "  #### Assignment" << std::endl;
+    node->visit_children(this);
 }
 
 void CodeGenerator::visitCallNode(CallNode* node) {
-    // WRITEME: Replace with code if necessary
+
+    std::cout << "  #### Call" << std::endl;
+    node->visit_children(this);
 }
 
 void CodeGenerator::visitIfElseNode(IfElseNode* node) {
@@ -97,6 +115,7 @@ void CodeGenerator::visitPrintNode(PrintNode* node) {
 }
 
 void CodeGenerator::visitDoWhileNode(DoWhileNode* node) {
+
     std::cout << "  #### Do-While" << std::endl;
     node->visit_children(this);
     std::cout << "  #pop the statement list" << std::endl;
