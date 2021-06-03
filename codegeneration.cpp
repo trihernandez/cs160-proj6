@@ -19,6 +19,7 @@ void CodeGenerator::visitProgramNode(ProgramNode* node) {
 void CodeGenerator::visitClassNode(ClassNode* node) {
     
     std::cout << "  #### Class" << std::endl;
+    std::cout << "  .globl" << std::endl;
     node->visit_children(this);
 }
 
@@ -27,7 +28,12 @@ void CodeGenerator::visitMethodNode(MethodNode* node) {
     std::cout << "  #### Method" << std::endl;
     std::cout << currentClassName << "_" << currentMethodName << ":" << std::endl;
     std::cout << "  push %ebp" << std::endl;
+    std::cout << "  mov %esp, %ebp" << std::endl;
+    std::cout << "  push %ebx" << std::endl;
     node->visit_children(this);
+    std::cout << "  pop %ebx" << std::endl;
+    std::cout << "  mov %ebp, %esp" << std::endl;
+    std::cout << "  pop %ebp" << std::endl;
 }
 
 void CodeGenerator::visitMethodBodyNode(MethodBodyNode* node) {
@@ -119,8 +125,8 @@ void CodeGenerator::visitPrintNode(PrintNode* node) {
     std::cout << "  call printf" << std::endl;
     std::cout << "  add $8, %esp" << std::endl;
 
-    std::cout << "  #pop the expression" << std::endl;
-    std::cout << "  pop %ebx" << std::endl;
+    //std::cout << "  #pop the expression" << std::endl;
+    //std::cout << "  pop %ebx" << std::endl;
 }
 
 void CodeGenerator::visitDoWhileNode(DoWhileNode* node) {
@@ -301,9 +307,9 @@ void CodeGenerator::visitMethodCallNode(MethodCallNode* node) {
             if( superClass.methods->find(methodName) != superClass.methods->end()  )        
             {
                 superClass.methods->at(methodName).offset;
-                std::cout << "mov %ebp, %eax" << std::endl;
-                std::cout << "add $offset, %eax" << std::endl;
-                std::cout << "push %eax" << std::endl;
+                std::cout << "  mov %ebp, %eax" << std::endl;
+                std::cout << "  add $offset, %eax" << std::endl;
+                std::cout << "  push %eax" << std::endl;
             }
         }
     }
@@ -322,7 +328,7 @@ void CodeGenerator::visitMemberAccessNode(MemberAccessNode* node) {
     {        
         currentClassInfo.members->at(classObjectMember).offset;
         std::cout << "  mov %ebp, %eax" << std::endl;
-        std::cout << "  add $offset, %eax" << std::endl;
+        std::cout << "  mov " << offset << "(%eax), %eax" << std::endl;
         std::cout << "  push %eax" << std::endl;
     }
     else
@@ -333,9 +339,9 @@ void CodeGenerator::visitMemberAccessNode(MemberAccessNode* node) {
             if( superClass.members->find(classObjectMember) != superClass.members->end() )       
             {
                 superClass.members->at(classObjectMember).offset;
-                std::cout << "mov %ebp, %eax" << std::endl;
-                std::cout << "add $offset, %eax" << std::endl;
-                std::cout << "push %eax" << std::endl;
+                std::cout << "  mov %ebp, %eax" << std::endl;
+                std::cout << "  mov " << offset << "(%eax), %eax" << std::endl;
+                std::cout << "  push %eax" << std::endl;
             }
         }
     }
@@ -350,10 +356,10 @@ void CodeGenerator::visitVariableNode(VariableNode* node) {
     node->visit_children(this);
     if( currentMethodInfo.variables->find(variable) != currentMethodInfo.variables->end() )
     {        
-        currentMethodInfo.variables->at(variable).offset();
-        std::cout << "mov %ebp, %eax" << std::endl;
-        std::cout << "add $offset, %eax" << std::endl;
-        std::cout << "push %eax" << std::endl;
+        int offset = currentMethodInfo.variables->at(variable).offset;
+        std::cout << "  mov %ebp, %eax" << std::endl;
+        std::cout << "  mov " << offset << "(%eax), %eax" << std::endl;
+        std::cout << "  push %eax" << std::endl;
     }
 }
 
