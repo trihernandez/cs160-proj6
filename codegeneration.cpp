@@ -10,49 +10,102 @@ void CodeGenerator::visitProgramNode(ProgramNode* node) {
     
     std::cout << "  #### Program" << std::endl;
     std::cout << "  .data" << std::endl;
-    std::cout << "  printstr: .asciz \"%d\n\"" << std::endl;
+    std::cout << "  printstr: .asciz \"%d\\n\"" << std::endl;
     std::cout << "  .text" << std::endl;
+    std::cout << "  .globl Main_main" << std::endl;
+
     node->visit_children(this);
     std::cout << "  ret" << std::endl;
 }
 
 void CodeGenerator::visitClassNode(ClassNode* node) {
     
-    std::cout << "  #### Class" << std::endl;
-    std::cout << "  .globl" << std::endl;
+    //initialize current class info
+    ClassInfo cInfo;
+
+    if( node->identifier_2 == NULL)
+        cInfo.superClassName = "";
+    else
+        cInfo.superClassName = node->identifier_2->name;
+        // if( classTable->find( cInfo.superClassName ) == classTable->end() )
+        //     typeError(undefined_class);
+
+    currentClassName = node->identifier_1->name;
+
+    std::cout << "  ######## Class" << currentClassName << std::endl;
+
+    /*
+    currentMemberOffset = 0;
+    currentVariableTable = new std::map<std::string, VariableInfo>();
+    cInfo.members = currentVariableTable;
+    std::list<DeclarationNode*>* MemberNodeList = node->declaration_list;
+    for (auto it = MemberNodeList->begin(); it!=MemberNodeList->end(); it++)
+    {
+        //since it's not a local variable, disable the currentLocalOffset for this declaration
+        currentLocalOffset = 4;
+        visitDeclarationNode( *it );
+        currentMemberOffset = currentMemberOffset + 4;
+    }
+    */
+
     node->visit_children(this);
+    std::cout << "  ######## End Class" << currentClassName << std::endl;
+
 }
 
 void CodeGenerator::visitMethodNode(MethodNode* node) {
 
-    std::cout << "  #### Method" << std::endl;
-    std::cout << "  " << currentClassName << "_" << currentMethodName << ":" << std::endl; //name not printing correctly
+    currentMethodName = node->identifier->name;
+    std::cout << "  #### Method " << currentMethodName << std::endl;
+
+    std::cout << currentClassName << "_" << currentMethodName << ":" << std::endl; //name not printing correctly
     std::cout << "  push %ebp" << std::endl;
     std::cout << "  mov %esp, %ebp" << std::endl;
     std::cout << "  sub $0, %esp" << std::endl; //I think this should not be 0 and instead the total offset of local variables
     std::cout << "  push %ebx" << std::endl;
+
+    std::cout << "  push %edi" << std::endl;
+    std::cout << "  push %esi" << std::endl;
+
     node->visit_children(this);
+
+    std::cout << "  pop %esi" << std::endl;
+    std::cout << "  pop %edi" << std::endl;
+
     std::cout << "  pop %ebx" << std::endl;
     std::cout << "  mov %ebp, %esp" << std::endl;
     std::cout << "  pop %ebp" << std::endl;
+    std::cout << "  #### End Method " << currentMethodName << std::endl;
+
 }
 
 void CodeGenerator::visitMethodBodyNode(MethodBodyNode* node) {
 
     std::cout << "  #### MethodBody" << std::endl;
     node->visit_children(this);
+    std::cout << "  #### MethodBody" << std::endl;
+
 }
 
 void CodeGenerator::visitParameterNode(ParameterNode* node) {
 
     std::cout << "  #### Parameter" << std::endl;
     node->visit_children(this);
+    std::cout << "  #### End Parameter" << std::endl;
+
 }
 
 void CodeGenerator::visitDeclarationNode(DeclarationNode* node) {
 
+    int allocSize = 0; // size of the object that we want to allocate.  I think it's 4 + (4*numVariables)
+
     std::cout << "  #### Declaration" << std::endl;
     node->visit_children(this);
+    //taken from Disc. 10 slide 15
+    std::cout << "  push $" << allocSize << "       # size to allocate" << std::endl;
+    std::cout << "  call malloc   # call malloc with one arg" << std::endl;
+    std::cout << "  add  $4, %esp # remove args from stack" << std::endl;
+    std::cout << "  push %eax" << std::endl;
 }
 
 void CodeGenerator::visitReturnStatementNode(ReturnStatementNode* node) {
@@ -63,8 +116,18 @@ void CodeGenerator::visitReturnStatementNode(ReturnStatementNode* node) {
 
 void CodeGenerator::visitAssignmentNode(AssignmentNode* node) {
 
+    std::string variable = node->identifier_1->name;
+    int offset = 0;
+
     std::cout << "  #### Assignment" << std::endl;
     node->visit_children(this);
+    if( currentMethodInfo.variables->find(variable) != currentMethodInfo.variables->end() )
+    {        
+        offset = currentMethodInfo.variables->at(variable).offset;
+        std::cout << "  mov " << offset << "%ebp, %ebx" << std::endl;
+        std::cout << "  mov 0(%ebx), %eax" << std::endl;
+        std::cout << "  mov %eax, 0(%ebx)" << std::endl;
+    }
 }
 
 void CodeGenerator::visitCallNode(CallNode* node) {
@@ -359,8 +422,8 @@ void CodeGenerator::visitVariableNode(VariableNode* node) {
     if( currentMethodInfo.variables->find(variable) != currentMethodInfo.variables->end() )
     {        
         int offset = currentMethodInfo.variables->at(variable).offset;
-        std::cout << "  mov %ebp, %eax" << std::endl;
-        std::cout << "  mov " << offset << "(%eax), %eax" << std::endl;
+        std::cout << "  mov " << offset << "%ebp, %ebx" << std::endl;
+        std::cout << "  mov 0(%ebx), %eax" << std::endl;
         std::cout << "  push %eax" << std::endl;
     }
 }
