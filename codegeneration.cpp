@@ -26,9 +26,10 @@ void CodeGenerator::visitClassNode(ClassNode* node) {
 void CodeGenerator::visitMethodNode(MethodNode* node) {
 
     std::cout << "  #### Method" << std::endl;
-    std::cout << currentClassName << "_" << currentMethodName << ":" << std::endl;
+    std::cout << "  " << currentClassName << "_" << currentMethodName << ":" << std::endl; //name not printing correctly
     std::cout << "  push %ebp" << std::endl;
     std::cout << "  mov %esp, %ebp" << std::endl;
+    std::cout << "  sub $0, %esp" << std::endl; //I think this should not be 0 and instead the total offset of local variables
     std::cout << "  push %ebx" << std::endl;
     node->visit_children(this);
     std::cout << "  pop %ebx" << std::endl;
@@ -291,28 +292,28 @@ void CodeGenerator::visitMethodCallNode(MethodCallNode* node) {
 
     std::cout << "  #### MethodCall" << std::endl;
     //update current method info?
-    node->visit_children(this);
-    if( currentClassInfo.methods->find(methodName) != currentClassInfo.methods->end() )
-    {        
-        currentClassInfo.methods->at(methodName).offset;
-        std::cout << "  mov %ebp, %eax" << std::endl;
-        std::cout << "  add $offset, %eax" << std::endl;
-        std::cout << "  push %eax" << std::endl;
-    }
-    else
-    {
-        if( classTable->find(currentClassInfo.superClassName) != classTable->end() )
-        { 
-            ClassInfo superClass = classTable->at(currentClassInfo.superClassName);
-            if( superClass.methods->find(methodName) != superClass.methods->end()  )        
-            {
-                superClass.methods->at(methodName).offset;
-                std::cout << "  mov %ebp, %eax" << std::endl;
-                std::cout << "  add $offset, %eax" << std::endl;
-                std::cout << "  push %eax" << std::endl;
-            }
-        }
-    }
+//     node->visit_children(this);
+//     if( currentClassInfo.methods->find(methodName) != currentClassInfo.methods->end() )
+//     {        
+//         currentClassInfo.methods->at(methodName).offset;
+//         std::cout << "  mov %ebp, %eax" << std::endl;
+//         std::cout << "  add $offset, %eax" << std::endl;
+//         std::cout << "  push %eax" << std::endl;
+//     }
+//     else
+//     {
+//         if( classTable->find(currentClassInfo.superClassName) != classTable->end() )
+//         { 
+//             ClassInfo superClass = classTable->at(currentClassInfo.superClassName);
+//             if( superClass.methods->find(methodName) != superClass.methods->end()  )        
+//             {
+//                 superClass.methods->at(methodName).offset;
+//                 std::cout << "  mov %ebp, %eax" << std::endl;
+//                 std::cout << "  add $offset, %eax" << std::endl;
+//                 std::cout << "  push %eax" << std::endl;
+//             }
+//         }
+//     }
 }
 
 void CodeGenerator::visitMemberAccessNode(MemberAccessNode* node) {
@@ -320,13 +321,14 @@ void CodeGenerator::visitMemberAccessNode(MemberAccessNode* node) {
     //VariableInfo variable;
     std::string classObjectName = node->identifier_1->name;
     std::string classObjectMember = node->identifier_2->name;
+    int offset = 0;
 
     std::cout << "  #### Member access" << std::endl;
     std::cout << "  # Find class object (identifier 1) in declared objects" << std::endl;
     node->visit_children(this);
     if( currentClassInfo.members->find(classObjectMember) != currentClassInfo.members->end() )
     {        
-        currentClassInfo.members->at(classObjectMember).offset;
+        offset = currentClassInfo.members->at(classObjectMember).offset;
         std::cout << "  mov %ebp, %eax" << std::endl;
         std::cout << "  mov " << offset << "(%eax), %eax" << std::endl;
         std::cout << "  push %eax" << std::endl;
@@ -338,7 +340,7 @@ void CodeGenerator::visitMemberAccessNode(MemberAccessNode* node) {
             ClassInfo superClass = classTable->at(currentClassInfo.superClassName);
             if( superClass.members->find(classObjectMember) != superClass.members->end() )       
             {
-                superClass.members->at(classObjectMember).offset;
+                offset = superClass.members->at(classObjectMember).offset;
                 std::cout << "  mov %ebp, %eax" << std::endl;
                 std::cout << "  mov " << offset << "(%eax), %eax" << std::endl;
                 std::cout << "  push %eax" << std::endl;
