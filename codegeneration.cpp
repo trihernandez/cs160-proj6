@@ -591,11 +591,15 @@ void CodeGenerator::visitMethodCallNode(MethodCallNode* node) {
     auto members = this->classTable->find(currentClassName)->second.members;
     auto variables = this->currentMethodInfo.variables;
 
+    MethodTable *methods = new MethodTable();
+
     //If the first part of a two-part method call is in the variable table
     int iden1isVariable = 0;
 
     int offset = 0;
-    int maxSuperOffset = 0;
+    //find the lowest offset of a parameter
+    int nextLowestOffest = 12;
+    int printedOffset = -4;
 
     //identify the class of the caller
     if(node->identifier_2 == NULL)
@@ -608,7 +612,7 @@ void CodeGenerator::visitMethodCallNode(MethodCallNode* node) {
             std::cout << "  # " << callingClassName << std::endl;
             auto callingClass = this->classTable->find(callingClassName);
 
-            auto methods = callingClass->second.methods;
+            methods = callingClass->second.methods;
 
             if( methods->find(iden1) == methods->end() )
             {
@@ -661,7 +665,7 @@ void CodeGenerator::visitMethodCallNode(MethodCallNode* node) {
             //std::cout << "  # " << callingClassName << std::endl;
             auto callingClass = this->classTable->find(callingClassName);
 
-            auto methods = callingClass->second.methods;
+            methods = callingClass->second.methods;
 
             if( methods->find(iden2) == methods->end() )
             {
@@ -674,6 +678,34 @@ void CodeGenerator::visitMethodCallNode(MethodCallNode* node) {
         }
     }
 
+    //obtain method information
+    auto thisMethod = methods->find(iden1);
+    if(node->identifier_2 != NULL)
+            thisMethod = methods->find(iden2);
+
+    for( auto it = (thisMethod)->second.variables->begin();
+            it != (thisMethod)->second.variables->end(); it++ )
+    {
+        if( (it)->second.offset == nextLowestOffest )
+        {
+            offset = nextLowestOffest;
+            nextLowestOffest += 4;
+            // if (node->expression_list)
+            // {
+            //     for(std::list<ExpressionNode*>::iterator it2 = node->expression_list->begin();
+            //         it2 != node->expression_list->end(); it2++) 
+            //     {
+            //         if( iden1isVariable == 23 ) //always false
+            //         {
+            //             (*it2)->accept(this);
+            //         }
+            //     }
+            // }
+        }
+    }
+
+    printedOffset = offset-4;
+
     std::cout << "  ## MethodCall" << std::endl;
 
     std::cout << "  push %eax" << std::endl;
@@ -683,25 +715,38 @@ void CodeGenerator::visitMethodCallNode(MethodCallNode* node) {
     //print parameters before running method
     //node->expression_list->accept(this);
 
+    // if (node->expression_list)
+    // {
+    //     for(std::list<ExpressionNode*>::iterator iter = node->expression_list->begin();
+    //         iter != node->expression_list->end(); iter++) 
+    //     {
+    //         (*iter)->accept(this);
+    //     }
+    // }
+
     if (node->expression_list)
     {
-        for(std::list<ExpressionNode*>::iterator iter = node->expression_list->begin();
-            iter != node->expression_list->end(); iter++) 
+        for(std::list<ExpressionNode*>::reverse_iterator iter = node->expression_list->rbegin();
+            iter != node->expression_list->rend(); iter++) 
         {
             (*iter)->accept(this);
         }
     }
 
     //std::cout << "  push " << offset << "(%ebp)" << std::endl;
-    std::cout << "  push -4(%ebp)" << std::endl;
+    std::cout << "  push " << printedOffset << "(%ebp)" << std::endl;
     if( node->identifier_2 == NULL )
         std::cout << "  call " << callingClassName << "_" << iden1 << std::endl;
     else
         std::cout << "  call " << callingClassName << "_" << iden2 << std::endl;
     //std::cout << "  add $"<< -offset <<", %esp" << std::endl;
-    std::cout << "  add $4, %esp" << std::endl;
-    std::cout << "  push %edx" << std::endl;
-    std::cout << "  push %ecx" << std::endl;
+
+    if(printedOffset == -4)
+        printedOffset = 4;
+
+    std::cout << "  add $"<< printedOffset <<", %esp" << std::endl;
+    std::cout << "  pop %edx" << std::endl;
+    std::cout << "  pop %ecx" << std::endl;
     std::cout << "  xchg (%esp), %eax" << std::endl;
 
     std::cout << "  ## End MethodCall" << std::endl;
