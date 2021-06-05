@@ -119,6 +119,7 @@ void CodeGenerator::visitReturnStatementNode(ReturnStatementNode* node) {
 
     std::cout << "  ## ReturnStatement" << std::endl;
     node->visit_children(this);
+    std::cout << "  pop %eax" << std::endl;
     std::cout << "  ## End ReturnStatement" << std::endl;
 }
 
@@ -310,6 +311,7 @@ void CodeGenerator::visitCallNode(CallNode* node) {
 
     std::cout << "  ## Call" << std::endl;
     node->visit_children(this);
+    std::cout << "   add $4, %esp" << std::endl;
     std::cout << "  ## End Call" << std::endl;
 
 }
@@ -361,24 +363,6 @@ void CodeGenerator::visitWhileNode(WhileNode* node) {
     std::cout << "  ## While" << std::endl;
 
     int thisLabel = nextLabel();
-    /*
-    node->visit_children(this);
-    std::cout << "  #pop the statement list" << std::endl;
-    std::cout << "  pop %ebx" << std::endl;
-    std::cout << "  #pop the expression" << std::endl;
-    std::cout << "  pop %eax" << std::endl;
-
-    std::cout << "  startLoop:" << std::endl;
-    std::cout << "  #check if the statement is true" << std::endl;
-    std::cout << "  and %eax, 1" << std::endl;
-    std::cout << "  cmp %eax, 1" << std::endl;
-    std::cout << "  jne endLoop" << std::endl;
-
-    std::cout << "  #run entire statement list" << std::endl;
-    std::cout << "  jmp startLoop"  << std::endl;
-
-    std::cout << "  endLoop:" << std::endl;
-    */
     std::cout << "  while" << thisLabel << ":" << std::endl;
 
     node->expression->accept(this);
@@ -595,37 +579,131 @@ void CodeGenerator::visitNegationNode(NegationNode* node) {
 
 void CodeGenerator::visitMethodCallNode(MethodCallNode* node) {
 
-    //VariableTable* variableTable = new VariableTable();
-    //VariableInfo variable;
-    //MethodInfo method;
-    std::string methodName = node->identifier_1->name;
-    if( node->identifier_2 )
-        methodName = node->identifier_2->name;
+    //memberOffsetIs
+    std::string iden1 = node->identifier_1->name;
+    std::string iden2;
+
+    std::string callingClassName = "";
+    std::string currentClassID = currentClassName;
+
+    //for each member ahead, it would be 4
+    //std::cout << "  # Start" << std::endl;
+    auto members = this->classTable->find(currentClassName)->second.members;
+    auto variables = this->currentMethodInfo.variables;
+
+    //If the first part of a two-part method call is in the variable table
+    int iden1isVariable = 0;
+
+    int offset = 0;
+    int maxSuperOffset = 0;
+
+    //identify the class of the caller
+    if(node->identifier_2 == NULL)
+    {
+        callingClassName = currentClassName;
+
+        //find the first class with this method's name
+        while( this->classTable->find(callingClassName) != this->classTable->end() )
+        {
+            std::cout << "  # " << callingClassName << std::endl;
+            auto callingClass = this->classTable->find(callingClassName);
+
+            auto methods = callingClass->second.methods;
+
+            if( methods->find(iden1) == methods->end() )
+            {
+                callingClassName = callingClass->second.superClassName;
+            }
+            else
+            {
+                break;
+            }
+        }
+    }
+    else
+    {
+        iden2 = node->identifier_2->name;
+
+        currentClassID = currentClassName;
+
+        //look for the iden1 in the current variable table
+        if( variables->find(iden1) != variables->end() )
+        {
+            iden1isVariable = 1;
+            callingClassName = variables->find(iden1)->second.type.objectClassName;
+        }
+
+        //look for the iden1 in the current member table, if not found in var. table
+        if( iden1isVariable == 0 )
+        {
+            while( members->find(iden1) != members->end() )
+            {
+                //std::cout << "  # " << currentClassID << std::endl;
+                auto currentClass = this->classTable->find(currentClassID);
+
+                members = currentClass->second.members;
+
+                if( members->find(iden1) == members->end() )
+                {
+                    currentClassID = currentClass->second.superClassName;
+                }
+                else
+                {
+                    break;
+                }
+            }
+            callingClassName = members->find(iden1)->second.type.objectClassName;
+        }
+
+        //find the first class with this method's name
+        while( this->classTable->find(callingClassName) != this->classTable->end() )
+        {
+            //std::cout << "  # " << callingClassName << std::endl;
+            auto callingClass = this->classTable->find(callingClassName);
+
+            auto methods = callingClass->second.methods;
+
+            if( methods->find(iden2) == methods->end() )
+            {
+                callingClassName = callingClass->second.superClassName;
+            }
+            else
+            {
+                break;
+            }
+        }
+    }
 
     std::cout << "  ## MethodCall" << std::endl;
-    //update current method info?
-//     node->visit_children(this);
-//     if( currentClassInfo.methods->find(methodName) != currentClassInfo.methods->end() )
-//     {        
-//         currentClassInfo.methods->at(methodName).offset;
-//         std::cout << "  mov %ebp, %eax" << std::endl;
-//         std::cout << "  add $offset, %eax" << std::endl;
-//         std::cout << "  push %eax" << std::endl;
-//     }
-//     else
-//     {
-//         if( classTable->find(currentClassInfo.superClassName) != classTable->end() )
-//         { 
-//             ClassInfo superClass = classTable->at(currentClassInfo.superClassName);
-//             if( superClass.methods->find(methodName) != superClass.methods->end()  )        
-//             {
-//                 superClass.methods->at(methodName).offset;
-//                 std::cout << "  mov %ebp, %eax" << std::endl;
-//                 std::cout << "  add $offset, %eax" << std::endl;
-//                 std::cout << "  push %eax" << std::endl;
-//             }
-//         }
-//     }
+
+    std::cout << "  push %eax" << std::endl;
+    std::cout << "  push %ecx" << std::endl;
+    std::cout << "  push %edx" << std::endl;
+
+    //print parameters before running method
+    //node->expression_list->accept(this);
+
+    if (node->expression_list)
+    {
+        for(std::list<ExpressionNode*>::iterator iter = node->expression_list->begin();
+            iter != node->expression_list->end(); iter++) 
+        {
+            (*iter)->accept(this);
+        }
+    }
+
+    //std::cout << "  push " << offset << "(%ebp)" << std::endl;
+    std::cout << "  push -4(%ebp)" << std::endl;
+    if( node->identifier_2 == NULL )
+        std::cout << "  call " << callingClassName << "_" << iden1 << std::endl;
+    else
+        std::cout << "  call " << callingClassName << "_" << iden2 << std::endl;
+    //std::cout << "  add $"<< -offset <<", %esp" << std::endl;
+    std::cout << "  add $4, %esp" << std::endl;
+    std::cout << "  push %edx" << std::endl;
+    std::cout << "  push %ecx" << std::endl;
+    std::cout << "  xchg (%esp), %eax" << std::endl;
+
     std::cout << "  ## End MethodCall" << std::endl;
 
 }
