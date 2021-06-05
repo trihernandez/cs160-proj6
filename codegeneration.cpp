@@ -8,14 +8,14 @@
 
 void CodeGenerator::visitProgramNode(ProgramNode* node) {
     
-    std::cout << "  #### Program" << std::endl;
+    std::cout << "  ############ Program" << std::endl;
     std::cout << "  .data" << std::endl;
     std::cout << "  printstr: .asciz \"%d\\n\"" << std::endl;
     std::cout << "  .text" << std::endl;
     std::cout << "  .globl Main_main" << std::endl;
 
     node->visit_children(this);
-    std::cout << "  ret" << std::endl;
+    std::cout << "  ############ End Program" << std::endl;
 }
 
 void CodeGenerator::visitClassNode(ClassNode* node) {
@@ -31,6 +31,7 @@ void CodeGenerator::visitClassNode(ClassNode* node) {
         //     typeError(undefined_class);
 
     currentClassName = node->identifier_1->name;
+    currentClassInfo = this->classTable->find(currentClassName)->second;
 
     std::cout << "  ######## Class" << currentClassName << std::endl;
 
@@ -50,12 +51,13 @@ void CodeGenerator::visitClassNode(ClassNode* node) {
 
     node->visit_children(this);
     std::cout << "  ######## End Class" << currentClassName << std::endl;
-
 }
 
 void CodeGenerator::visitMethodNode(MethodNode* node) {
 
     currentMethodName = node->identifier->name;
+    currentMethodInfo = currentClassInfo.methods->find(currentMethodName)->second;
+
     std::cout << "  #### Method " << currentMethodName << std::endl;
 
     std::cout << currentClassName << "_" << currentMethodName << ":" << std::endl; //name not printing correctly
@@ -75,23 +77,25 @@ void CodeGenerator::visitMethodNode(MethodNode* node) {
     std::cout << "  pop %ebx" << std::endl;
     std::cout << "  mov %ebp, %esp" << std::endl;
     std::cout << "  pop %ebp" << std::endl;
+
+    std::cout << "  ret" << std::endl;
     std::cout << "  #### End Method " << currentMethodName << std::endl;
 
 }
 
 void CodeGenerator::visitMethodBodyNode(MethodBodyNode* node) {
 
-    std::cout << "  #### MethodBody" << std::endl;
+    std::cout << "  ## MethodBody" << std::endl;
     node->visit_children(this);
-    std::cout << "  #### MethodBody" << std::endl;
+    std::cout << "  ## End MethodBody" << std::endl;
 
 }
 
 void CodeGenerator::visitParameterNode(ParameterNode* node) {
 
-    std::cout << "  #### Parameter" << std::endl;
+    std::cout << "  ## Parameter" << std::endl;
     node->visit_children(this);
-    std::cout << "  #### End Parameter" << std::endl;
+    std::cout << "  ## End Parameter" << std::endl;
 
 }
 
@@ -99,46 +103,61 @@ void CodeGenerator::visitDeclarationNode(DeclarationNode* node) {
 
     int allocSize = 0; // size of the object that we want to allocate.  I think it's 4 + (4*numVariables)
 
-    std::cout << "  #### Declaration" << std::endl;
+    // std::cout << "  ## Declaration" << std::endl;
+
     node->visit_children(this);
-    //taken from Disc. 10 slide 15
-    std::cout << "  push $" << allocSize << "       # size to allocate" << std::endl;
-    std::cout << "  call malloc   # call malloc with one arg" << std::endl;
-    std::cout << "  add  $4, %esp # remove args from stack" << std::endl;
-    std::cout << "  push %eax" << std::endl;
+    // //taken from Disc. 10 slide 15
+    // std::cout << "  push $" << allocSize << "       # size to allocate" << std::endl;
+    // std::cout << "  call malloc   # call malloc with one arg" << std::endl;
+    // std::cout << "  add  $4, %esp # remove args from stack" << std::endl;
+    // std::cout << "  push %eax" << std::endl;
+
+    // std::cout << "  ## End Declaration" << std::endl;
 }
 
 void CodeGenerator::visitReturnStatementNode(ReturnStatementNode* node) {
 
-    std::cout << "  #### ReturnStatement" << std::endl;
+    std::cout << "  ## ReturnStatement" << std::endl;
     node->visit_children(this);
+    std::cout << "  ## End ReturnStatement" << std::endl;
 }
 
 void CodeGenerator::visitAssignmentNode(AssignmentNode* node) {
 
+    //memberOffsetIs
+    //node->identifier_1->name
+    //node->identifier_2->name
+
+    //for each member ahead, it would be 4
+    auto *members = this->classTable->at(currentClassName).members;
+
     std::string variable = node->identifier_1->name;
     int offset = 0;
 
-    std::cout << "  #### Assignment" << std::endl;
+    //work on an offset calculator
+
+    std::cout << "  ## Assignment" << std::endl;
     node->visit_children(this);
-    if( currentMethodInfo.variables->find(variable) != currentMethodInfo.variables->end() )
+    if( this->currentMethodInfo.variables->find(variable) != this->currentMethodInfo.variables->end() )
     {        
-        offset = currentMethodInfo.variables->at(variable).offset;
-        std::cout << "  mov " << offset << "%ebp, %ebx" << std::endl;
-        std::cout << "  mov 0(%ebx), %eax" << std::endl;
-        std::cout << "  mov %eax, 0(%ebx)" << std::endl;
+        offset = this->currentMethodInfo.variables->at(variable).offset;
+        std::cout << "  pop " << offset << "(%ebx)" << std::endl;
     }
+    std::cout << "  ## End Assignment" << std::endl;
+
 }
 
 void CodeGenerator::visitCallNode(CallNode* node) {
 
-    std::cout << "  #### Call" << std::endl;
+    std::cout << "  ## Call" << std::endl;
     node->visit_children(this);
+    std::cout << "  ## End Call" << std::endl;
+
 }
 
 void CodeGenerator::visitIfElseNode(IfElseNode* node) {
     
-    std::cout << "  #### If/Else" << std::endl;
+    std::cout << "  ## If/Else" << std::endl;
     node->visit_children(this);
     std::cout << "  #pop the else statement list" << std::endl;
     std::cout << "  pop %ecx" << std::endl;
@@ -157,11 +176,13 @@ void CodeGenerator::visitIfElseNode(IfElseNode* node) {
     std::cout << "  #if the statment is true" << std::endl;
     std::cout << "  ifTrue:" << std::endl;
     std::cout << "  #run every statment in %ebx" << std::endl;
+    std::cout << "  ## End If/Else" << std::endl;
+
 }
 
 void CodeGenerator::visitWhileNode(WhileNode* node) {
 
-    std::cout << "  #### While" << std::endl;
+    std::cout << "  ## While" << std::endl;
     node->visit_children(this);
     std::cout << "  #pop the statement list" << std::endl;
     std::cout << "  pop %ebx" << std::endl;
@@ -178,24 +199,34 @@ void CodeGenerator::visitWhileNode(WhileNode* node) {
     std::cout << "  jmp startLoop"  << std::endl;
 
     std::cout << "  endLoop:" << std::endl;
+    std::cout << "  ## End While" << std::endl;
+
 }
 
 void CodeGenerator::visitPrintNode(PrintNode* node) {
     
-    std::cout << "  #### Print" << std::endl;
+    std::cout << "  ## Print" << std::endl;
+
+    std::cout << "  push %eax" << std::endl;
+    std::cout << "  push %ecx" << std::endl;
+    std::cout << "  push %edx" << std::endl;
+
     node->visit_children(this);
-    std::cout << "  #print the expression" << std::endl;
-    std::cout << "  push $printstr" << std::endl;
+
+    std::cout << "  pushl $printstr" << std::endl;
     std::cout << "  call printf" << std::endl;
     std::cout << "  add $8, %esp" << std::endl;
 
-    //std::cout << "  #pop the expression" << std::endl;
-    //std::cout << "  pop %ebx" << std::endl;
+    std::cout << "  pop %edx" << std::endl;
+    std::cout << "  pop %ecx" << std::endl;
+    std::cout << "  pop %eax" << std::endl;
+
+    std::cout << "  ## End Print" << std::endl;
 }
 
 void CodeGenerator::visitDoWhileNode(DoWhileNode* node) {
 
-    std::cout << "  #### Do-While" << std::endl;
+    std::cout << "  ## Do-While" << std::endl;
     node->visit_children(this);
     std::cout << "  #pop the statement list" << std::endl;
     std::cout << "  pop %ebx" << std::endl;
@@ -213,11 +244,13 @@ void CodeGenerator::visitDoWhileNode(DoWhileNode* node) {
     std::cout << "  jmp startLoop"  << std::endl;
 
     std::cout << "  endLoop:" << std::endl;
+    std::cout << "  ## End Do-While" << std::endl;
+
 }
 
 void CodeGenerator::visitPlusNode(PlusNode* node) {
 
-    std::cout << "  #### Plus" << std::endl;
+    std::cout << "  ## Plus" << std::endl;
 
     node->visit_children(this);
 
@@ -225,11 +258,13 @@ void CodeGenerator::visitPlusNode(PlusNode* node) {
     std::cout << "  pop %eax" << std::endl;
     std::cout << "  add %ebx, %eax" << std::endl;
     std::cout << "  push %eax" << std::endl;
+
+    std::cout << "  ## End Plus" << std::endl;
 }
 
 void CodeGenerator::visitMinusNode(MinusNode* node) {
 
-    std::cout << "  #### Minus" << std::endl;
+    std::cout << "  ## Minus" << std::endl;
 
     node->visit_children(this);
 
@@ -237,33 +272,41 @@ void CodeGenerator::visitMinusNode(MinusNode* node) {
     std::cout << "  pop %eax" << std::endl;
     std::cout << "  sub %ebx, %eax" << std::endl;
     std::cout << "  push %eax" << std::endl;
+
+    std::cout << "  ## End Minus" << std::endl;
 }
 
 void CodeGenerator::visitTimesNode(TimesNode* node) {
 
-    std::cout << "  #### Times" << std::endl;
+    std::cout << "  ## Times" << std::endl;
     node->visit_children(this);
     std::cout << "  pop %ebx" << std::endl;
     std::cout << "  pop %eax" << std::endl;
     std::cout << "  imul %ebx, %eax" << std::endl;
     std::cout << "  push %eax" << std::endl;
+
+    std::cout << "  ## End Times" << std::endl;
+
 }
 
 void CodeGenerator::visitDivideNode(DivideNode* node) {
 
     //ask the professor
-    std::cout << "  #### Divide" << std::endl;
+    std::cout << "  ## Divide" << std::endl;
     node->visit_children(this);
-    std::cout << "  pop %edx" << std::endl;
+    std::cout << "  pop %ebx" << std::endl;
     std::cout << "  pop %eax" << std::endl;
-    //std::cout << "  cdq" << std::endl;
+    std::cout << "  cdq" << std::endl;
     std::cout << "  idiv %ebx" << std::endl;
     std::cout << "  push %eax" << std::endl;
+
+    std::cout << "  ## End Divide" << std::endl;
+
 }
 
 void CodeGenerator::visitGreaterNode(GreaterNode* node) {
 
-    std::cout << "  #### Greater" << std::endl;
+    std::cout << "  ## Greater" << std::endl;
     node->visit_children(this);
     std::cout << "  pop %ebx" << std::endl;
     std::cout << "  pop %eax" << std::endl;
@@ -274,11 +317,14 @@ void CodeGenerator::visitGreaterNode(GreaterNode* node) {
 
     std::cout << "  setGreater:" << std::endl;
     std::cout << "  push $1" << std::endl;
+
+    std::cout << "  ## End Greater" << std::endl;
+
 }
 
 void CodeGenerator::visitGreaterEqualNode(GreaterEqualNode* node) {
 
-    std::cout << "  #### GreaterEqual" << std::endl;
+    std::cout << "  ## GreaterEqual" << std::endl;
     node->visit_children(this);
     std::cout << "  pop %ebx" << std::endl;
     std::cout << "  pop %eax" << std::endl;
@@ -289,11 +335,13 @@ void CodeGenerator::visitGreaterEqualNode(GreaterEqualNode* node) {
 
     std::cout << "  setGreaterEqual:" << std::endl;
     std::cout << "  push $1" << std::endl;
+
+    std::cout << "  ## End GreaterEqual" << std::endl;
 }
 
 void CodeGenerator::visitEqualNode(EqualNode* node) {
 
-    std::cout << "  #### Equal" << std::endl;
+    std::cout << "  ## Equal" << std::endl;
     node->visit_children(this);
     std::cout << "  pop %ebx" << std::endl;
     std::cout << "  pop %eax" << std::endl;
@@ -304,44 +352,51 @@ void CodeGenerator::visitEqualNode(EqualNode* node) {
 
     std::cout << "  setEqual:" << std::endl;
     std::cout << "  push $1" << std::endl;
+
+    std::cout << "  ## End Equal" << std::endl;
 }
 
 void CodeGenerator::visitAndNode(AndNode* node) {
 
-    std::cout << "  #### And" << std::endl;
+    std::cout << "  ## And" << std::endl;
     node->visit_children(this);
     std::cout << "  pop %ebx" << std::endl;
     std::cout << "  pop %eax" << std::endl;
     std::cout << "  and %ebx, %eax" << std::endl;
     std::cout << "  push %eax" << std::endl;
+    std::cout << "  ## End And" << std::endl;
 }
 
 void CodeGenerator::visitOrNode(OrNode* node) {
 
-    std::cout << "  #### Or" << std::endl;
+    std::cout << "  ## Or" << std::endl;
     node->visit_children(this);
     std::cout << "  pop %ebx" << std::endl;
     std::cout << "  pop %eax" << std::endl;
     std::cout << "  or %ebx, %eax" << std::endl;
     std::cout << "  push %eax" << std::endl;
+    std::cout << "  ## End Or" << std::endl;
 }
 
 void CodeGenerator::visitNotNode(NotNode* node) {
 
-    std::cout << "  #### Not" << std::endl;
+    std::cout << "  ## Not" << std::endl;
     node->visit_children(this);
     std::cout << "  pop %eax" << std::endl;
     std::cout << "  not %eax" << std::endl;
     std::cout << "  push %eax" << std::endl;
+    std::cout << "  ## End Not" << std::endl;
 }
 
 void CodeGenerator::visitNegationNode(NegationNode* node) {
     
-    std::cout << "  #### Negation" << std::endl;
+    std::cout << "  ## Negation" << std::endl;
     node->visit_children(this);
     std::cout << "  pop %eax" << std::endl;
     std::cout << "  neg %eax" << std::endl;
     std::cout << "  push %eax" << std::endl;
+
+    std::cout << "  ## End Negation" << std::endl;
 }
 
 void CodeGenerator::visitMethodCallNode(MethodCallNode* node) {
@@ -353,7 +408,7 @@ void CodeGenerator::visitMethodCallNode(MethodCallNode* node) {
     if( node->identifier_2 )
         methodName = node->identifier_2->name;
 
-    std::cout << "  #### MethodCall" << std::endl;
+    std::cout << "  ## MethodCall" << std::endl;
     //update current method info?
 //     node->visit_children(this);
 //     if( currentClassInfo.methods->find(methodName) != currentClassInfo.methods->end() )
@@ -377,6 +432,8 @@ void CodeGenerator::visitMethodCallNode(MethodCallNode* node) {
 //             }
 //         }
 //     }
+    std::cout << "  ## End MethodCall" << std::endl;
+
 }
 
 void CodeGenerator::visitMemberAccessNode(MemberAccessNode* node) {
@@ -386,7 +443,7 @@ void CodeGenerator::visitMemberAccessNode(MemberAccessNode* node) {
     std::string classObjectMember = node->identifier_2->name;
     int offset = 0;
 
-    std::cout << "  #### Member access" << std::endl;
+    std::cout << "  ## MemberAccess" << std::endl;
     std::cout << "  # Find class object (identifier 1) in declared objects" << std::endl;
     node->visit_children(this);
     if( currentClassInfo.members->find(classObjectMember) != currentClassInfo.members->end() )
@@ -410,6 +467,8 @@ void CodeGenerator::visitMemberAccessNode(MemberAccessNode* node) {
             }
         }
     }
+    std::cout << "  ## End MemberAccess" << std::endl;
+
 }
 
 void CodeGenerator::visitVariableNode(VariableNode* node) {
@@ -417,30 +476,29 @@ void CodeGenerator::visitVariableNode(VariableNode* node) {
     //VariableInfo variable;
     std::string variable = node->identifier->name;
 
-    std::cout << "  #### Variable" << std::endl;
+    std::cout << "  ## Variable" << std::endl;
     node->visit_children(this);
     if( currentMethodInfo.variables->find(variable) != currentMethodInfo.variables->end() )
     {        
         int offset = currentMethodInfo.variables->at(variable).offset;
-        std::cout << "  mov " << offset << "%ebp, %ebx" << std::endl;
-        std::cout << "  mov 0(%ebx), %eax" << std::endl;
-        std::cout << "  push %eax" << std::endl;
+        std::cout << "  push " << offset << "%(ebp)" << std::endl;
     }
+    std::cout << "  ## End Variable" << std::endl;
 }
 
 void CodeGenerator::visitIntegerLiteralNode(IntegerLiteralNode* node) {
 
-    std::cout << "  #### IntLiteral" << std::endl;
+    std::cout << "  ## IntLiteral" << std::endl;
     node->visit_children(this);
-    std::cout << "  # get the integer value stored at this node" << std::endl;
     std::cout << "  push $" << node->integer->value << std::endl;
+    std::cout << "  ## End IntLiteral" << std::endl;
 }
 
 void CodeGenerator::visitBooleanLiteralNode(BooleanLiteralNode* node) {
-    std::cout << "  #### BoolLiteral" << std::endl;
+    std::cout << "  ## BoolLiteral" << std::endl;
     node->visit_children(this);
-    std::cout << "  # get 1 if true and 0 if false" << std::endl;
     std::cout << "  push $" << node->integer->value << std::endl;
+    std::cout << "  ## End BoolLiteral" << std::endl;
 }
 
 void CodeGenerator::visitNewNode(NewNode* node) {
