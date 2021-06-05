@@ -7,7 +7,7 @@
 //Clarifications on @269 and @270
 
 void CodeGenerator::visitProgramNode(ProgramNode* node) {
-    
+        
     std::cout << "  ############ Program" << std::endl;
     std::cout << "  .data" << std::endl;
     std::cout << "  printstr: .asciz \"%d\\n\"" << std::endl;
@@ -132,38 +132,38 @@ void CodeGenerator::visitAssignmentNode(AssignmentNode* node) {
     std::string leftClassName = "";
 
     //for each member ahead, it would be 4
-    std::cout << "  # Start" << std::endl;
+    //std::cout << "  # Start" << std::endl;
     auto members = this->classTable->find(currentClassName)->second.members;
     auto variables = this->currentMethodInfo.variables;
 
     int offset = 0;
     int maxSuperOffset = 0;
-    std::cout << "  # Before if" << std::endl;
+    //std::cout << "  # Before if" << std::endl;
 
     //Check if node->identifier 2 is null.
     //  If so, check if node->identifier 1 is a member of the current class
     //  Or in the current method's variableTable
     if(node->identifier_2 == NULL)
     {
-        std::cout << "  # iden1 = " << iden1 << std::endl;
+        //std::cout << "  # iden1 = " << iden1 << std::endl;
         //if it is in the variable table get its offset
         if( variables->find(iden1) != variables->end())
         {
-            std::cout << "  # iden1 in variable table " << std::endl;
+            //std::cout << "  # iden1 in variable table " << std::endl;
             for( auto m = variables->begin(); m != variables->end(); m++)
             {
                 if(m->first == iden1)
                 {
                     offset = m->second.offset;
                 }
-                std::cout << "  # offset = " << offset << std::endl;
+                //std::cout << "  # offset = " << offset << std::endl;
             }
         }
 
         //if it is in current class check all the members
         if( members->find(iden1) != members->end())
         {
-            std::cout << "  # iden1 in member table " << std::endl;
+            //std::cout << "  # iden1 in member table " << std::endl;
             for( auto m = members->begin(); m != members->end(); m++)
             {
                 if(m->first == iden1)
@@ -171,7 +171,7 @@ void CodeGenerator::visitAssignmentNode(AssignmentNode* node) {
                     offset = m->second.offset;
                 }
                 maxSuperOffset = maxSuperOffset + 4;
-                std::cout << "  # offset = " << offset << std::endl;
+                //std::cout << "  # offset = " << offset << std::endl;
             }
         }
     }
@@ -317,28 +317,51 @@ void CodeGenerator::visitCallNode(CallNode* node) {
 void CodeGenerator::visitIfElseNode(IfElseNode* node) {
     
     std::cout << "  ## If/Else" << std::endl;
-    node->visit_children(this);
-    std::cout << "  pop %ecx" << std::endl;
-    std::cout << "  pop %ebx" << std::endl;
+
+    int thisLabel = nextLabel();
+
+    //node->visit_children(this);
+    
+    node->expression->accept(this);
+
     std::cout << "  pop %eax" << std::endl;
+    std::cout << "  cmp $0, %eax" << std::endl;
+    std::cout << "  je else" << thisLabel << std::endl;
+    
+    //node->statement_list_1->accept(this);
 
-    std::cout << "  #check if the statement is not false (0)" << std::endl;
-    std::cout << "  and %eax, 1" << std::endl;
-    std::cout << "  cmp %eax, 1" << std::endl;
-    std::cout << "  je ifTrue" << std::endl;
-    std::cout << "  #if the statment is false" << std::endl;
-    std::cout << "  #run every statment in %ecx" << std::endl;
+    if (node->statement_list_1) 
+    {
+        for(std::list<StatementNode*>::iterator iter = node->statement_list_1->begin();
+            iter != node->statement_list_1->end(); iter++) 
+        {
+            (*iter)->accept(this);
+        }
+    }
 
-    std::cout << "  #if the statment is true" << std::endl;
-    std::cout << "  ifTrue:" << std::endl;
-    std::cout << "  #run every statment in %ebx" << std::endl;
+    std::cout << "  jmp endif" << thisLabel << "" << std::endl;
+    std::cout << "  else" << thisLabel << ":" << std::endl;
+
+    if (node->statement_list_2)
+    {
+        for(std::list<StatementNode*>::iterator iter = node->statement_list_2->begin();
+            iter != node->statement_list_2->end(); iter++) 
+        {
+            (*iter)->accept(this);
+        }
+    }
+
+    std::cout << "  endif" << thisLabel << ":" << std::endl;
+
     std::cout << "  ## End If/Else" << std::endl;
-
 }
 
 void CodeGenerator::visitWhileNode(WhileNode* node) {
 
     std::cout << "  ## While" << std::endl;
+
+    int thisLabel = nextLabel();
+    /*
     node->visit_children(this);
     std::cout << "  #pop the statement list" << std::endl;
     std::cout << "  pop %ebx" << std::endl;
@@ -355,6 +378,27 @@ void CodeGenerator::visitWhileNode(WhileNode* node) {
     std::cout << "  jmp startLoop"  << std::endl;
 
     std::cout << "  endLoop:" << std::endl;
+    */
+    std::cout << "  while" << thisLabel << ":" << std::endl;
+
+    node->expression->accept(this);
+
+    std::cout << "  pop %eax" << std::endl;
+    std::cout << "  cmp $0, %eax" << std::endl;
+    std::cout << "  je endwhile" << thisLabel << std::endl;
+
+    if (node->statement_list)
+    {
+        for(std::list<StatementNode*>::iterator iter = node->statement_list->begin();
+            iter != node->statement_list->end(); iter++) 
+        {
+            (*iter)->accept(this);
+        }
+    }
+
+    std::cout << "  jmp while" << thisLabel << std::endl;
+    std::cout << "  endwhile" << thisLabel << ":" << std::endl;
+
     std::cout << "  ## End While" << std::endl;
 
 }
@@ -464,15 +508,13 @@ void CodeGenerator::visitGreaterNode(GreaterNode* node) {
 
     std::cout << "  ## Greater" << std::endl;
     node->visit_children(this);
+    
     std::cout << "  pop %ebx" << std::endl;
     std::cout << "  pop %eax" << std::endl;
-    std::cout << "  comp %ebx, %eax" << std::endl;
-    std::cout << "  jge setGreater" << std::endl;
-    std::cout << "  push $0" << std::endl;
-    //how do we end this part without also pushing 1?
-
-    std::cout << "  setGreater:" << std::endl;
-    std::cout << "  push $1" << std::endl;
+    std::cout << "  mov $0, %edx" << std::endl;
+    std::cout << "  cmp %ebx, %eax" << std::endl;
+    std::cout << "  setg %dl" << std::endl;
+    std::cout << "  push %edx" << std::endl;
 
     std::cout << "  ## End Greater" << std::endl;
 
@@ -482,15 +524,13 @@ void CodeGenerator::visitGreaterEqualNode(GreaterEqualNode* node) {
 
     std::cout << "  ## GreaterEqual" << std::endl;
     node->visit_children(this);
+
     std::cout << "  pop %ebx" << std::endl;
     std::cout << "  pop %eax" << std::endl;
-    std::cout << "  comp %ebx, %eax" << std::endl;
-    std::cout << "  jge setGreaterEqual" << std::endl;
-    std::cout << "  push $0" << std::endl;
-    //how do we end this part without also pushing 1?
-
-    std::cout << "  setGreaterEqual:" << std::endl;
-    std::cout << "  push $1" << std::endl;
+    std::cout << "  mov $0, %edx" << std::endl;
+    std::cout << "  cmp %ebx, %eax" << std::endl;
+    std::cout << "  setge %dl" << std::endl;
+    std::cout << "  push %edx" << std::endl;
 
     std::cout << "  ## End GreaterEqual" << std::endl;
 }
@@ -499,15 +539,13 @@ void CodeGenerator::visitEqualNode(EqualNode* node) {
 
     std::cout << "  ## Equal" << std::endl;
     node->visit_children(this);
+
     std::cout << "  pop %ebx" << std::endl;
     std::cout << "  pop %eax" << std::endl;
-    std::cout << "  comp %ebx, %eax" << std::endl;
-    std::cout << "  je setEqual" << std::endl;
-    std::cout << "  push $0" << std::endl;
-    //how do we end this part without also pushing 1?
-
-    std::cout << "  setEqual:" << std::endl;
-    std::cout << "  push $1" << std::endl;
+    std::cout << "  mov $0, %edx" << std::endl;
+    std::cout << "  cmp %ebx, %eax" << std::endl;
+    std::cout << "  sete %dl" << std::endl;
+    std::cout << "  push %edx" << std::endl;
 
     std::cout << "  ## End Equal" << std::endl;
 }
