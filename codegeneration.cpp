@@ -129,10 +129,37 @@ void CodeGenerator::visitAssignmentNode(AssignmentNode* node) {
     //node->identifier_2->name
 
     //for each member ahead, it would be 4
-    auto *members = this->classTable->at(currentClassName).members;
+    std::cout << "  Start" << std::endl;
+    auto *members = this->classTable->find(currentClassName)->second.members;
+
+    int offset = 0;
+    int iteration = 0;
+    std::cout << "  Before if" << std::endl;
+
+    if(members->find(node->identifier_1->name) != members->end()){//if it is in current class check all the members
+        std::cout << "  In if " << std::endl;
+        for( auto m = members->begin(); m != members->end(); m++){
+            if(m->first == node->identifier_1->name){
+                offset = iteration;
+            }
+            iteration = iteration + 4;
+        }
+    }
+    else{//if it is in the superclass
+    std::cout << "  In else" << std::endl;
+        members = this->classTable->find(this->classTable->find(currentClassName)->second.superClassName)->second.members;
+        std::cout << "  Start" << std::endl;
+        for( auto m = members->begin(); m != members->end(); m++){
+            std::cout << "  For" << std::endl;
+            if(m->first == node->identifier_1->name){
+                offset = iteration;
+            }
+            iteration = iteration + 4;
+        }
+
+    }
 
     std::string variable = node->identifier_1->name;
-    int offset = 0;
 
     //work on an offset calculator
 
@@ -140,7 +167,7 @@ void CodeGenerator::visitAssignmentNode(AssignmentNode* node) {
     node->visit_children(this);
     if( this->currentMethodInfo.variables->find(variable) != this->currentMethodInfo.variables->end() )
     {        
-        offset = this->currentMethodInfo.variables->at(variable).offset;
+        //offset = this->currentMethodInfo.variables->at(variable).offset;
         std::cout << "  pop " << offset << "(%ebx)" << std::endl;
     }
     std::cout << "  ## End Assignment" << std::endl;
@@ -442,12 +469,21 @@ void CodeGenerator::visitMemberAccessNode(MemberAccessNode* node) {
     std::string classObjectName = node->identifier_1->name;
     std::string classObjectMember = node->identifier_2->name;
     int offset = 0;
-
+    int iteration = 0;
     std::cout << "  ## MemberAccess" << std::endl;
     std::cout << "  # Find class object (identifier 1) in declared objects" << std::endl;
     node->visit_children(this);
     if( currentClassInfo.members->find(classObjectMember) != currentClassInfo.members->end() )
-    {        
+    {       
+        // auto* mems =  currentClassInfo.members;
+        // for( auto m = mems->begin(); m != mems->end(); m++){
+        //     if(m->first == classObjectMember){
+        //         offset = iteration;
+        //     }
+        //     iteration = iteration + 4;
+        // }
+
+
         offset = currentClassInfo.members->at(classObjectMember).offset;
         std::cout << "  mov %ebp, %eax" << std::endl;
         std::cout << "  mov " << offset << "(%eax), %eax" << std::endl;
@@ -460,6 +496,13 @@ void CodeGenerator::visitMemberAccessNode(MemberAccessNode* node) {
             ClassInfo superClass = classTable->at(currentClassInfo.superClassName);
             if( superClass.members->find(classObjectMember) != superClass.members->end() )       
             {
+                // auto* mems =  superClass.members;
+                // for( auto m = mems->begin(); m != mems->end(); m++){
+                //     if(m->first == classObjectMember){
+                //         offset = iteration;//may need to add offset of main class
+                //     }
+                //     iteration = iteration + 4;
+                // }
                 offset = superClass.members->at(classObjectMember).offset;
                 std::cout << "  mov %ebp, %eax" << std::endl;
                 std::cout << "  mov " << offset << "(%eax), %eax" << std::endl;
