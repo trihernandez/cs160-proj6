@@ -63,7 +63,7 @@ void CodeGenerator::visitMethodNode(MethodNode* node) {
     std::cout << currentClassName << "_" << currentMethodName << ":" << std::endl; //name not printing correctly
     std::cout << "  push %ebp" << std::endl;
     std::cout << "  mov %esp, %ebp" << std::endl;
-    std::cout << "  sub $0, %esp" << std::endl; //I think this should not be 0 and instead the total offset of local variables
+    std::cout << "  sub $" << currentMethodInfo.localsSize << ", %esp" << std::endl; //I think this should not be 0 and instead the total offset of local variables
     std::cout << "  push %ebx" << std::endl;
 
     std::cout << "  push %edi" << std::endl;
@@ -125,14 +125,173 @@ void CodeGenerator::visitReturnStatementNode(ReturnStatementNode* node) {
 void CodeGenerator::visitAssignmentNode(AssignmentNode* node) {
 
     //memberOffsetIs
-    //node->identifier_1->name
-    //node->identifier_2->name
+    std::string iden1 = node->identifier_1->name;
+    std::string iden2;
+
+    std::string iden1className = "";
+    std::string leftClassName = "";
 
     //for each member ahead, it would be 4
-    auto *members = this->classTable->at(currentClassName).members;
+    std::cout << "  # Start" << std::endl;
+    auto members = this->classTable->find(currentClassName)->second.members;
+    auto variables = this->currentMethodInfo.variables;
+
+    int offset = 0;
+    int maxSuperOffset = 0;
+    std::cout << "  # Before if" << std::endl;
+
+    //Check if node->identifier 2 is null.
+    //  If so, check if node->identifier 1 is a member of the current class
+    //  Or in the current method's variableTable
+    if(node->identifier_2 == NULL)
+    {
+        std::cout << "  # iden1 = " << iden1 << std::endl;
+        //if it is in the variable table get its offset
+        if( variables->find(iden1) != variables->end())
+        {
+            std::cout << "  # iden1 in variable table " << std::endl;
+            for( auto m = variables->begin(); m != variables->end(); m++)
+            {
+                if(m->first == iden1)
+                {
+                    offset = m->second.offset;
+                }
+                std::cout << "  # offset = " << offset << std::endl;
+            }
+        }
+
+        //if it is in current class check all the members
+        if( members->find(iden1) != members->end())
+        {
+            std::cout << "  # iden1 in member table " << std::endl;
+            for( auto m = members->begin(); m != members->end(); m++)
+            {
+                if(m->first == iden1)
+                {
+                    offset = m->second.offset;
+                }
+                maxSuperOffset = maxSuperOffset + 4;
+                std::cout << "  # offset = " << offset << std::endl;
+            }
+        }
+    }
+    //Else, check if identifier_1 is in the currentVariableTable as a defined class
+    //  and then check if identifier_2 is in the class' method table
+    else
+    {
+        std::cout << "  # In else " << std::endl;
+
+        iden2 = node->identifier_2->name;
+
+        while(true)
+        {
+            //First, check if iden1 is in auto *members
+            auto memberSearch = members->find( iden1 );
+            if( memberSearch != members->end() )
+            {
+                //iden1 is in the member table as a class
+                if ( node->basetype == bt_object )
+                    leftClassName = memberSearch->second.type.objectClassName;
+                break;
+            }
+
+            //Else, check if iden1 is a local var. of the current method
+            auto variableSearch = variables->find( iden1 );
+            if( variableSearch != variables->end() )
+            {
+                //iden1 is in the variable table as a class
+                if ( node->basetype == bt_object )
+                    leftClassName = variableSearch->second.type.objectClassName;
+                break;
+            }
+         
+            //Else, check if iden1 is a member of a superclass
+            std::string currentSuperClassName = currentClassInfo.superClassName;
+            auto currentSuperClass = classTable->find(currentSuperClassName);
+
+            //Else, Check if the superclass exists and has members
+            if( currentSuperClass != classTable->end() && currentSuperClass->second.members != NULL )
+            {
+                //check if iden1 is a member of the superclass
+                auto superMemberTableSearch = currentSuperClass->second.members->find(iden1);
+                if( superMemberTableSearch != currentSuperClass->second.members->end() )
+                {
+                    //iden1 is in the superclass' member table as a class
+                    if ( node->basetype == bt_object )
+                        leftClassName = superMemberTableSearch->second.type.objectClassName;
+                    break;
+                }
+            }
+        }
+
+        printf("  # iden1Class");
+        auto iden1Class = classTable->find(iden1className);
+
+        //Check if iden2 is a member of iden1
+        std::map<std::string, VariableInfo>::iterator iden1MemberTableSearch = iden1Class->second.members->find(iden2);
+        if( iden1MemberTableSearch != iden1Class->second.members->end() )
+        {
+            //iden2 is a member of iden1
+        }
+        else
+        {
+            //check if the superclass of iden1 exists
+            std::string iden1superClassName = iden1Class->second.superClassName;
+            std::map<std::string, ClassInfo>::iterator iden1superClass = classTable->find(iden1superClassName);
+            
+            //check if iden2 is a member in the superclass of iden1
+            if( iden1superClass != classTable->end() ) {
+                std::map<std::string, VariableInfo>::iterator iden1SuperMemberTableSearch = iden1superClass->second.members->find(iden2);
+                if( iden1SuperMemberTableSearch != iden1superClass->second.members->end() )
+                {
+                    //iden2 is a member of the superclass of iden1
+                    if ( node->basetype == bt_object )
+                        leftClassName = iden1SuperMemberTableSearch->second.type.objectClassName;
+                }
+                else
+                {
+                    typeError(undefined_member);
+                }
+            }
+            else
+            {
+                typeError(undefined_member);
+            }
+        }
+    }
+
+    /*
+    if(members->find(iden1) != members->end()){//if it is in current class check all the members
+        std::cout << "  # In if " << std::endl;
+        for( auto m = members->begin(); m != members->end(); m++)
+        {
+            if(m->first == iden1)
+            {
+                offset = m->second.offset;
+            }
+            iteration = iteration + 4;
+        }
+    }
+    else{//if it is in the superclass
+        std::cout << "  # In else" << std::endl;
+        std::string superClassName = this->classTable->find(currentClassName)->second.superClassName;
+        auto SuperMembers = this->classTable->find(superClassName)->second.members;
+
+        std::cout << "  # Start" << std::endl;
+        for( auto m = members->begin(); m != members->end(); m++)
+        {
+            std::cout << "  # For" << std::endl;
+            if(m->first == iden1)
+            {
+                offset = m->second.offset;
+            }
+            iteration = iteration + 4;
+        }
+    }
+    */
+
 
     std::string variable = node->identifier_1->name;
-    int offset = 0;
 
     //work on an offset calculator
 
@@ -140,8 +299,8 @@ void CodeGenerator::visitAssignmentNode(AssignmentNode* node) {
     node->visit_children(this);
     if( this->currentMethodInfo.variables->find(variable) != this->currentMethodInfo.variables->end() )
     {        
-        offset = this->currentMethodInfo.variables->at(variable).offset;
-        std::cout << "  pop " << offset << "(%ebx)" << std::endl;
+        //offset = this->currentMethodInfo.variables->at(variable).offset;
+        std::cout << "  pop " << offset << "(%ebp)" << std::endl;
     }
     std::cout << "  ## End Assignment" << std::endl;
 
@@ -159,11 +318,8 @@ void CodeGenerator::visitIfElseNode(IfElseNode* node) {
     
     std::cout << "  ## If/Else" << std::endl;
     node->visit_children(this);
-    std::cout << "  #pop the else statement list" << std::endl;
     std::cout << "  pop %ecx" << std::endl;
-    std::cout << "  #pop the if statement list" << std::endl;
     std::cout << "  pop %ebx" << std::endl;
-    std::cout << "  #pop the expression" << std::endl;
     std::cout << "  pop %eax" << std::endl;
 
     std::cout << "  #check if the statement is not false (0)" << std::endl;
@@ -442,12 +598,21 @@ void CodeGenerator::visitMemberAccessNode(MemberAccessNode* node) {
     std::string classObjectName = node->identifier_1->name;
     std::string classObjectMember = node->identifier_2->name;
     int offset = 0;
-
+    int iteration = 0;
     std::cout << "  ## MemberAccess" << std::endl;
     std::cout << "  # Find class object (identifier 1) in declared objects" << std::endl;
     node->visit_children(this);
     if( currentClassInfo.members->find(classObjectMember) != currentClassInfo.members->end() )
-    {        
+    {       
+        // auto* mems =  currentClassInfo.members;
+        // for( auto m = mems->begin(); m != mems->end(); m++){
+        //     if(m->first == classObjectMember){
+        //         offset = iteration;
+        //     }
+        //     iteration = iteration + 4;
+        // }
+
+
         offset = currentClassInfo.members->at(classObjectMember).offset;
         std::cout << "  mov %ebp, %eax" << std::endl;
         std::cout << "  mov " << offset << "(%eax), %eax" << std::endl;
@@ -460,6 +625,13 @@ void CodeGenerator::visitMemberAccessNode(MemberAccessNode* node) {
             ClassInfo superClass = classTable->at(currentClassInfo.superClassName);
             if( superClass.members->find(classObjectMember) != superClass.members->end() )       
             {
+                // auto* mems =  superClass.members;
+                // for( auto m = mems->begin(); m != mems->end(); m++){
+                //     if(m->first == classObjectMember){
+                //         offset = iteration;//may need to add offset of main class
+                //     }
+                //     iteration = iteration + 4;
+                // }
                 offset = superClass.members->at(classObjectMember).offset;
                 std::cout << "  mov %ebp, %eax" << std::endl;
                 std::cout << "  mov " << offset << "(%eax), %eax" << std::endl;
@@ -481,7 +653,7 @@ void CodeGenerator::visitVariableNode(VariableNode* node) {
     if( currentMethodInfo.variables->find(variable) != currentMethodInfo.variables->end() )
     {        
         int offset = currentMethodInfo.variables->at(variable).offset;
-        std::cout << "  push " << offset << "%(ebp)" << std::endl;
+        std::cout << "  push " << offset << "(%ebp)" << std::endl;
     }
     std::cout << "  ## End Variable" << std::endl;
 }
