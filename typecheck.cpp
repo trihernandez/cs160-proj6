@@ -146,6 +146,9 @@ void TypeCheck::visitMethodNode(MethodNode* node) {
         {
             //check if they're both of the same object class type
             if(node->type->objectClassName != node->methodbody->returnstatement->expression->objectClassName){
+                std::cout << node->type->objectClassName << std::endl;
+                std::cout << node->methodbody->returnstatement->expression->objectClassName << std::endl;
+                printf("149 return_type_mismatch");
                 typeError(return_type_mismatch);
             }
         }
@@ -154,6 +157,7 @@ void TypeCheck::visitMethodNode(MethodNode* node) {
         {
             //check if they're both of the same type
             if(node->type->basetype != node->methodbody->returnstatement->expression->basetype){
+                printf("158 return_type_mismatch");
                 typeError(return_type_mismatch);
             }
         }
@@ -161,6 +165,7 @@ void TypeCheck::visitMethodNode(MethodNode* node) {
     else
     {
         if(node->type->basetype != bt_none){
+            printf("166 return_type_mismatch");
             typeError(return_type_mismatch);
         }
     }
@@ -974,15 +979,15 @@ void TypeCheck::visitVariableNode(VariableNode* node) {
     }
         
     //else check if iden1 is still a member of the superclass of the current class
-    if(currentClass != classTable->end())
+    while (currentClass != classTable->end())
     {
         std::string currentSuperClassName = currentClass->second.superClassName;
-        std::map<std::string, ClassInfo>::iterator currentSuperClass = classTable->find(currentSuperClassName);
+        currentClass = classTable->find(currentSuperClassName);
 
-        if( currentSuperClass != classTable->end() && currentSuperClass->second.members != NULL )
+        if( currentClass != classTable->end() && currentClass->second.members != NULL )
         {
-            std::map<std::string, VariableInfo>::iterator superMemberTableSearch = currentSuperClass->second.members->find(iden1);
-            if( currentSuperClass->second.members->find(iden1) != currentSuperClass->second.members->end() )
+            std::map<std::string, VariableInfo>::iterator superMemberTableSearch = currentClass->second.members->find(iden1);
+            if( currentClass->second.members->find(iden1) != currentClass->second.members->end() )
             {
                 node->basetype = superMemberTableSearch->second.type.baseType;
                 node->objectClassName = "";
