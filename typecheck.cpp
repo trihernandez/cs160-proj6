@@ -76,12 +76,8 @@ void TypeCheck::visitProgramNode(ProgramNode* node) {
     if(MainClass==classTable->end()){
         typeError(no_main_class);
     }
-    std::map<std::string, MethodInfo>::iterator MainMain = MainClass->second.methods->find("main");
-    if(MainMain == MainClass->second.methods->end()){
+    if(MainClass->second.methods->find("main") == MainClass->second.methods->end()){
         typeError(no_main_method);
-    }
-    if( MainMain->second.returnType.baseType != bt_none && !(MainMain->second.parameters->empty()) ){
-        typeError(main_method_incorrect_signature);
     }
 }
 
@@ -99,7 +95,7 @@ void TypeCheck::visitClassNode(ClassNode* node) {
     }
 
     currentClassName = node->identifier_1->name;
-    ////printf("------new class ------\n");
+    //printf("------new class ------\n");
 
     currentMemberOffset = 0;
     currentVariableTable = new std::map<std::string, VariableInfo>();
@@ -192,10 +188,6 @@ void TypeCheck::visitMethodNode(MethodNode* node) {
         mInfo.parameters->push_back(cType);
     }
 
-    //constructor has same name as class
-    if( methodName == currentClassName && mInfo.returnType.baseType != bt_none )
-        typeError(constructor_returns_type);
-
     currentMethodTable->insert( std::pair<std::string, MethodInfo>(methodName,mInfo) );
 }
 
@@ -275,6 +267,7 @@ void TypeCheck::visitAssignmentNode(AssignmentNode* node) {
 
     node->visit_children(this);
 
+
     std::string iden1 = node->identifier_1->name;
     std::string iden2;
 
@@ -286,6 +279,20 @@ void TypeCheck::visitAssignmentNode(AssignmentNode* node) {
 
     if(node->identifier_2 == NULL)
     {
+        /*
+        if( currentVariableTable->find(iden1) = currentVariableTable->end() )
+        {
+            printf("284: undefined_variable");
+            typeError(undefined_variable);
+        }
+
+        std::map<std::string, VariableInfo>::iterator variableTableSearch = currentVariableTable->find( iden1 );
+
+        leftType = variableTableSearch->second.type.baseType;
+        if ( leftType == bt_object )
+            leftClassName = variableTableSearch->second.type.objectClassName;
+        */
+
         while(true)
         {
             //first, check if iden1 is in the currentVariableTable
@@ -330,9 +337,10 @@ void TypeCheck::visitAssignmentNode(AssignmentNode* node) {
                     }
                 }
             }
-            //printf("333: undefined_variable");
+            printf("344: undefined_variable");
             typeError(undefined_variable);
         }
+
     }
     else
     {
@@ -384,7 +392,7 @@ void TypeCheck::visitAssignmentNode(AssignmentNode* node) {
                     }
                 }
             }
-            //printf("387: undefined_variable");
+            printf("344: undefined_variable");
             typeError(undefined_variable);
         }
 
@@ -412,7 +420,7 @@ void TypeCheck::visitAssignmentNode(AssignmentNode* node) {
                 if( iden1SuperMemberTableSearch != iden1superClass->second.members->end() )
                 {
                     leftType = iden1SuperMemberTableSearch->second.type.baseType;
-                    if ( node->basetype == bt_object )
+                    if ( leftType == bt_object )
                         leftClassName = iden1SuperMemberTableSearch->second.type.objectClassName;
                 }
                 else
@@ -479,7 +487,7 @@ void TypeCheck::visitPrintNode(PrintNode* node) {
 
 void TypeCheck::visitPlusNode(PlusNode* node) {
 
-    ////printf("PLUS NODE\n");
+    //printf("PLUS NODE\n");
     //Make sure to visit children
     node->visit_children(this);
 
@@ -493,7 +501,7 @@ void TypeCheck::visitPlusNode(PlusNode* node) {
 void TypeCheck::visitMinusNode(MinusNode* node) {
 
     //Make sure to visit children
-    ////printf("MINUS NODE\n");
+    //printf("MINUS NODE\n");
     node->visit_children(this);
 
     if( node->expression_1->basetype != bt_integer )
@@ -506,7 +514,7 @@ void TypeCheck::visitMinusNode(MinusNode* node) {
 void TypeCheck::visitTimesNode(TimesNode* node) {
 
     //Make sure to visit children
-    ////printf("TIMES NODE\n");
+    //printf("TIMES NODE\n");
     node->visit_children(this);
 
     if( node->expression_1->basetype != bt_integer )
@@ -519,7 +527,7 @@ void TypeCheck::visitTimesNode(TimesNode* node) {
 void TypeCheck::visitDivideNode(DivideNode* node) {
 
     //Make sure to visit children
-    ////printf("DIVIDE NODE\n");
+    //printf("DIVIDE NODE\n");
     node->visit_children(this);
 
     if( node->expression_1->basetype != bt_integer )
@@ -532,7 +540,7 @@ void TypeCheck::visitDivideNode(DivideNode* node) {
 void TypeCheck::visitGreaterNode(GreaterNode* node) {
 
     //Make sure to visit children
-    ////printf("GREATER NODE\n");
+    //printf("GREATER NODE\n");
     node->visit_children(this);
 
     if( node->expression_1->basetype != bt_integer )
@@ -545,7 +553,7 @@ void TypeCheck::visitGreaterNode(GreaterNode* node) {
 void TypeCheck::visitGreaterEqualNode(GreaterEqualNode* node) {
 
     //Make sure to visit children
-    ////printf("GREATEREQ NODE\n");
+    //printf("GREATEREQ NODE\n");
     node->visit_children(this);
 
     if( node->expression_1->basetype != bt_integer )
@@ -558,7 +566,7 @@ void TypeCheck::visitGreaterEqualNode(GreaterEqualNode* node) {
 void TypeCheck::visitEqualNode(EqualNode* node) {
 
     //Make sure to visit children
-    ////printf("EQUAL NODE\n");
+    //printf("EQUAL NODE\n");
     node->visit_children(this);
 
     if( !(node->expression_1->basetype == bt_integer || node->expression_1->basetype == bt_boolean) )
@@ -573,7 +581,7 @@ void TypeCheck::visitEqualNode(EqualNode* node) {
 void TypeCheck::visitAndNode(AndNode* node) {
 
     //Make sure to visit children
-    ////printf("AND NODE\n");
+    //printf("AND NODE\n");
     node->visit_children(this);
 
     if( node->expression_1->basetype != bt_boolean )
@@ -586,7 +594,7 @@ void TypeCheck::visitAndNode(AndNode* node) {
 void TypeCheck::visitOrNode(OrNode* node) {
 
     //Make sure to visit children
-    ////printf("OR NODE\n");
+    //printf("OR NODE\n");
     node->visit_children(this);
 
     if( node->expression_1->basetype != bt_boolean )
@@ -599,7 +607,7 @@ void TypeCheck::visitOrNode(OrNode* node) {
 void TypeCheck::visitNotNode(NotNode* node) {
     
     //Make sure to visit children
-    ////printf("NOT NODE\n");
+    //printf("NOT NODE\n");
     node->visit_children(this);
 
     if( node->expression->basetype != bt_boolean )
@@ -610,7 +618,7 @@ void TypeCheck::visitNotNode(NotNode* node) {
 void TypeCheck::visitNegationNode(NegationNode* node) {
 
     //Make sure to visit children
-    ////printf("NEGATION NODE\n");
+    //printf("NEGATION NODE\n");
     node->visit_children(this);
 
     if( node->expression->basetype != bt_integer )
@@ -621,7 +629,7 @@ void TypeCheck::visitNegationNode(NegationNode* node) {
 void TypeCheck::visitMethodCallNode(MethodCallNode* node) {
 
     //Make sure to visit children
-    ////printf("METHOD CALL NODE\n");
+    //printf("METHOD CALL NODE\n");
     node->visit_children(this);
 
     std::string iden1 = node->identifier_1->name;
@@ -632,23 +640,35 @@ void TypeCheck::visitMethodCallNode(MethodCallNode* node) {
 
     MethodInfo cMethod;
 
+    //the top part:
+    //if there's only one identifier, check if this identifier is in the current methodtable
+    //else
+    //  check if the first identifier if in the currentVariableTable of the method
+    //      then check if it's in the variableTable of the currentClass
+    //      then check if it's in the variableTable of the superclass of the currentClass
+    //      else return error
+    //  if identifier_1 is not initialized as a class in the corresponding variable table return error
+    //  if identifier_1 lacks methods return error
     if(node->identifier_2 == NULL)
     {
         while(true)
         {
-            std::map<std::string, MethodInfo>::iterator currentMethod = currentMethodTable->find( iden1 );
-            if( currentMethod != currentMethodTable->end() )
+            //first, check if iden1 is in the currentVariableTable
+            auto MethodTableSearch = currentMethodTable->find(iden1);
+            if( MethodTableSearch != currentMethodTable->end() )
             {
-                cMethod = currentMethod->second;
-                node->basetype = currentMethod->second.returnType.baseType;
+                cMethod = MethodTableSearch->second;
+                node->basetype = MethodTableSearch->second.returnType.baseType;
                 node->objectClassName = "";
                 if ( node->basetype == bt_object )
-                    node->objectClassName = currentMethod->second.returnType.objectClassName;
+                    node->objectClassName = MethodTableSearch->second.returnType.objectClassName;
                 break;
             }
-            //else check if iden1 is still a method of the current class
+
             std::map<std::string, ClassInfo>::iterator currentClass = classTable->find(currentClassName);
-            if(currentClass != classTable->end())
+
+            //else check if iden1 is still a method of the superclass of the current class
+            if( currentClass != classTable->end() )
             {
                 std::string currentSuperClassName = currentClass->second.superClassName;
                 std::map<std::string, ClassInfo>::iterator currentSuperClass = classTable->find(currentSuperClassName);
@@ -667,6 +687,7 @@ void TypeCheck::visitMethodCallNode(MethodCallNode* node) {
                     }
                 }
             }
+            printf("656: undefined_method");
             typeError(undefined_method);
         }
     }
@@ -719,7 +740,7 @@ void TypeCheck::visitMethodCallNode(MethodCallNode* node) {
                     }
                 }
             }
-            //printf("722: undefined_variable");
+            printf("663: undefined_variable");
             typeError(undefined_variable);
         }
 
@@ -761,11 +782,13 @@ void TypeCheck::visitMethodCallNode(MethodCallNode* node) {
                 }
                 else
                 {
+                    printf("759: undefined_method");
                     typeError(undefined_method);
                 }
             }
             else
-            {   
+            {
+                printf("765: undefined_method");
                 typeError(undefined_method);
             }
         }
@@ -818,7 +841,7 @@ void TypeCheck::visitMethodCallNode(MethodCallNode* node) {
 
 void TypeCheck::visitMemberAccessNode(MemberAccessNode* node) {
 
-    ////printf("MEM ACCESS NODE\n");
+    //printf("MEM ACCESS NODE\n");
     node->visit_children(this);
 
     //get the names of the identifier
@@ -871,7 +894,7 @@ void TypeCheck::visitMemberAccessNode(MemberAccessNode* node) {
                 }
             }
         }
-        //printf("874: undefined_variable");
+        printf("815: undefined_variable");
         typeError(undefined_variable);
     }
     
@@ -919,7 +942,7 @@ void TypeCheck::visitMemberAccessNode(MemberAccessNode* node) {
 
 void TypeCheck::visitVariableNode(VariableNode* node) {
 
-    ////printf("VARIABLE NODE\n");
+    //printf("VARIABLE NODE\n");
     node->visit_children(this);
 
     std::string iden1 = node->identifier->name;
@@ -969,7 +992,7 @@ void TypeCheck::visitVariableNode(VariableNode* node) {
             }
         }
     }
-    //printf("972: undefined_variable");
+    printf("913: undefined_variable");
     typeError(undefined_variable);
 }
 
@@ -984,6 +1007,15 @@ void TypeCheck::visitBooleanLiteralNode(BooleanLiteralNode* node) {
 
 void TypeCheck::visitNewNode(NewNode* node) {
 
+    /*
+    std::string className = node->identifier->name;
+    std::map<std::string, ClassInfo>::iterator newClass = classTable->find(className);
+    if(newClass == classTable->end() )
+        typeError(undefined_class);
+    node->basetype = bt_object;
+    node->objectClassName = className;
+    */
+
     node->visit_children(this);
 
     std::string className = node->identifier->name;
@@ -996,51 +1028,53 @@ void TypeCheck::visitNewNode(NewNode* node) {
     node->objectClassName = className;
 
     std::map<std::string, MethodInfo>::iterator Constructor = newClass->second.methods->find(className);
-    MethodInfo cMethod = Constructor->second;
+    if(Constructor != newClass->second.methods->end() )
+    {
+        MethodInfo cMethod = Constructor->second;
 
-    //get the # of arguments for the given method
-    int argCount = 0;
+        //get the # of arguments for the given method
+        int argCount = 0;
 
-    if(node->expression_list!= NULL){
-        std::list<ExpressionNode*>* ExpressionNodeList = node->expression_list;
-        for (auto it = ExpressionNodeList->begin(); it!=ExpressionNodeList->end(); it++)
-        {
-            argCount++;
+        if(node->expression_list!= NULL){
+            std::list<ExpressionNode*>* ExpressionNodeList = node->expression_list;
+            for (auto it = ExpressionNodeList->begin(); it!=ExpressionNodeList->end(); it++)
+            {
+                argCount++;
+            }
+        }
+        if(cMethod.parameters != NULL){
+            std::list<CompoundType>* ParamList= cMethod.parameters;
+            for (auto it = ParamList->begin(); it!=ParamList->end(); it++)
+            {
+                argCount--;
+            }
+        }
+        
+        if (argCount != 0){
+            typeError(argument_number_mismatch);
+        }
+
+        if(cMethod.parameters != NULL && node->expression_list!= NULL){
+
+            std::list<ExpressionNode*>* ExpressionNodeList = node->expression_list;
+            std::list<CompoundType>* ParamList= cMethod.parameters;
+
+            auto ExpressionNodeIt = ExpressionNodeList->begin();
+            auto ParamIt = ParamList->begin();
+
+            while( ExpressionNodeIt != ExpressionNodeList->end() && ParamIt != ParamList->end() )
+            {
+                if( (*ExpressionNodeIt)->basetype != ParamIt->baseType )
+                    typeError(argument_type_mismatch);
+                if( (*ExpressionNodeIt)->basetype == bt_object )
+                    if( (*ExpressionNodeIt)->objectClassName != ParamIt->objectClassName )
+                    typeError(argument_type_mismatch);
+                
+                ExpressionNodeIt++;
+                ParamIt++;
+            }
         }
     }
-    if(cMethod.parameters != NULL){
-        std::list<CompoundType>* ParamList= cMethod.parameters;
-        for (auto it = ParamList->begin(); it!=ParamList->end(); it++)
-        {
-            argCount--;
-        }
-    }
-    
-    if (argCount != 0){
-        typeError(argument_number_mismatch);
-    }
-
-    if(cMethod.parameters != NULL && node->expression_list!= NULL){
-
-        std::list<ExpressionNode*>* ExpressionNodeList = node->expression_list;
-        std::list<CompoundType>* ParamList= cMethod.parameters;
-
-        auto ExpressionNodeIt = ExpressionNodeList->begin();
-        auto ParamIt = ParamList->begin();
-
-        while( ExpressionNodeIt != ExpressionNodeList->end() && ParamIt != ParamList->end() )
-        {
-            if( (*ExpressionNodeIt)->basetype != ParamIt->baseType )
-                typeError(argument_type_mismatch);
-            if( (*ExpressionNodeIt)->basetype == bt_object )
-                if( (*ExpressionNodeIt)->objectClassName != ParamIt->objectClassName )
-                typeError(argument_type_mismatch);
-            
-            ExpressionNodeIt++;
-            ParamIt++;
-        }
-    }
-
 }
 
 void TypeCheck::visitIntegerTypeNode(IntegerTypeNode* node) {
