@@ -171,14 +171,11 @@ void CodeGenerator::visitAssignmentNode(AssignmentNode* node) {
                 offset1 = thisVariableInfo.offset;
                 iden1IsFound = 1;
             }
-            else
-            {
-                offset1 += 4 * ( currentClass->second.members->size() );
-            }
         }
 
         // std::cout << " # 176" << std::endl;
         //else check if iden1 is still a member of the superclass of the current class
+
         if( iden1IsVariable == 0 && currentClass != classTable->end() )
         {
             std::string currentSuperClassName = currentClass->second.superClassName;
@@ -225,11 +222,6 @@ void CodeGenerator::visitAssignmentNode(AssignmentNode* node) {
                 thisVariableInfo = thisVariable->second;
                 offset2 = thisVariableInfo.offset;
                 iden2IsFound = 1;
-            }
-            else
-            {
-                // std::cout << " # 225; offset2 = " << offset2 << std::endl;
-                offset2 += 4 * ( currentClass->second.members->size() );
             }
         }
 
@@ -279,7 +271,6 @@ void CodeGenerator::visitAssignmentNode(AssignmentNode* node) {
     }
 
     std::cout << "  # End Assignment" << std::endl;
-
 }
 
 
@@ -338,16 +329,17 @@ void CodeGenerator::visitWhileNode(WhileNode* node) {
 
     std::cout << "  # While" << std::endl;
 
+    
     int thisLabel = nextLabel();
-    std::cout << "  while" << thisLabel << ":" << std::endl;
+    // std::cout << "  while" << thisLabel << ":" << std::endl;
 
-    node->expression->accept(this);
+    // node->expression->accept(this);
 
-    std::cout << "  pop %eax" << std::endl;
-    std::cout << "  cmp $0, %eax" << std::endl;
-    std::cout << "  je endwhile" << thisLabel << std::endl;
+    // std::cout << "  pop %eax" << std::endl;
+    // std::cout << "  cmp $0, %eax" << std::endl;
+    // std::cout << "  je endwhile" << thisLabel << std::endl;
 
-    if (node->statement_list)
+    if (node->statement_list != NULL)
     {
         for(std::list<StatementNode*>::iterator iter = node->statement_list->begin();
             iter != node->statement_list->end(); iter++) 
@@ -356,8 +348,9 @@ void CodeGenerator::visitWhileNode(WhileNode* node) {
         }
     }
 
-    std::cout << "  jmp while" << thisLabel << std::endl;
-    std::cout << "  endwhile" << thisLabel << ":" << std::endl;
+    // std::cout << "  jmp while" << thisLabel << std::endl;
+    // std::cout << "  endwhile" << thisLabel << ":" << std::endl;
+    
 
     std::cout << "  # End While" << std::endl;
 
@@ -390,8 +383,9 @@ void CodeGenerator::visitDoWhileNode(DoWhileNode* node) {
 
     int thisLabel = nextLabel();
 
-    std::cout << "  # Do-While" << std::endl;
-    std::cout << "  dowhile" << thisLabel << ":" << std::endl;
+    // std::cout << "  # Do-While" << std::endl;
+
+    // std::cout << "  dowhile" << thisLabel << ":" << std::endl;
     
     if (node->statement_list)
     {
@@ -402,11 +396,11 @@ void CodeGenerator::visitDoWhileNode(DoWhileNode* node) {
         }
     }
 
-    node->expression->accept(this);
+    // node->expression->accept(this);
 
-    std::cout << "  pop %eax" << std::endl;
-    std::cout << "  cmp $0, %eax" << std::endl;
-    std::cout << "  jne dowhile" << thisLabel << std::endl;
+    // std::cout << "  pop %eax" << std::endl;
+    // std::cout << "  cmp $0, %eax" << std::endl;
+    // std::cout << "  jne dowhile" << thisLabel << std::endl;
 
     std::cout << "  # End Do-While" << std::endl;
 
@@ -841,13 +835,70 @@ void CodeGenerator::visitBooleanLiteralNode(BooleanLiteralNode* node) {
 }
 
 void CodeGenerator::visitNewNode(NewNode* node) {
-    std::cout << "  # NewNode" << std::endl;
-    node->visit_children(this);
-    std::cout << "  push $8" << std::endl;
-    std::cout << "  call malloc" << std::endl;
-    std::cout << "  add $4, %esp" << std::endl;
-    std::cout << "  push %eax" << std::endl;
-    std::cout << "  # End NewNode" << std::endl;}
+
+    std::string newClass = node->identifier->name;
+
+    ClassInfo newClassInfo = classTable->find(newClass)->second;
+    int numMembers = newClassInfo.members->size();
+    int numParameters = 1;
+
+    auto currentClass = classTable->find(newClass);
+
+    //else check if iden1 is still a member of the superclass of the current class
+    while (currentClass != classTable->end())
+    {
+        std::string currentSuperClassName = currentClass->second.superClassName;
+        currentClass = classTable->find(currentSuperClassName);
+
+        if( currentClass != classTable->end() && currentClass->second.members != NULL )
+        {
+            numMembers = numMembers + currentClass->second.members->size();
+        }
+    }
+
+    std::cout << "  # New" << std::endl;
+
+    std::cout << " push $" << (4 * numMembers) << std::endl;
+    std::cout << " call malloc" << std::endl;
+    std::cout << " add $4, %esp" << std::endl;
+
+    //look for constructor, and do associated things if it exists
+    auto constructor = newClassInfo.methods->find(newClass);
+    if( constructor != newClassInfo.methods->end() )
+    {
+        std::cout << " mov %eax, %edi" << (4 * numMembers) << std::endl;
+        std::cout << " push %eax" << std::endl;
+        std::cout << " push %ecx" << std::endl;
+        std::cout << " push %edx" << std::endl;
+
+        if (node->expression_list != NULL)
+        {
+            for(std::list<ExpressionNode*>::reverse_iterator iter = node->expression_list->rbegin();
+                iter != node->expression_list->rend(); iter++) 
+            {
+                numParameters++;
+                (*iter)->accept(this);
+            }
+        }
+
+        std::cout << " push %edi" << std::endl;
+        std::cout << " call " << newClass << "_" << newClass << std::endl;
+        std::cout << " add $" << (4 * numParameters) << ", %esp" << std::endl;
+
+        std::cout << " pop %edx" << std::endl;
+        std::cout << " pop %ecx" << std::endl;
+        std::cout << " pop %eax" << std::endl;
+        std::cout << " push %edi" << std::endl;
+
+
+    }
+    //otherwise, the new lass does not have a constructor
+    else
+    {
+        std::cout << " push %eax" << std::endl;
+    }
+    std::cout << "  # End New" << std::endl;
+    }
 
 //starting here I don't think we write anything else
 void CodeGenerator::visitIntegerTypeNode(IntegerTypeNode* node) {
