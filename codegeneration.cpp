@@ -8,14 +8,18 @@
 
 void CodeGenerator::visitProgramNode(ProgramNode* node) {
         
-    std::cout << "  ############ Program" << std::endl;
-    std::cout << "  .data" << std::endl;
-    std::cout << "  printstr: .asciz \"%d\\n\"" << std::endl;
-    std::cout << "  .text" << std::endl;
-    std::cout << "  .globl Main_main" << std::endl;
+    //std::cout << "  ########### Program" << std::endl;
+    std::cout << ".data" << std::endl;
+    std::cout << "printstr: .asciz \"%d\\n\"" << std::endl;
+    std::cout << "" << std::endl;
+    std::cout << ".text" << std::endl;
+    std::cout << ".globl Main_main" << std::endl;
+
+    std::cout << "" << std::endl;
+
 
     node->visit_children(this);
-    std::cout << "  ############ End Program" << std::endl;
+    std::cout << "  ########### End Program" << std::endl;
 }
 
 void CodeGenerator::visitClassNode(ClassNode* node) {
@@ -33,24 +37,10 @@ void CodeGenerator::visitClassNode(ClassNode* node) {
     currentClassName = node->identifier_1->name;
     currentClassInfo = this->classTable->find(currentClassName)->second;
 
-    std::cout << "  ######## Class" << currentClassName << std::endl;
-
-    /*
-    currentMemberOffset = 0;
-    currentVariableTable = new std::map<std::string, VariableInfo>();
-    cInfo.members = currentVariableTable;
-    std::list<DeclarationNode*>* MemberNodeList = node->declaration_list;
-    for (auto it = MemberNodeList->begin(); it!=MemberNodeList->end(); it++)
-    {
-        //since it's not a local variable, disable the currentLocalOffset for this declaration
-        currentLocalOffset = 4;
-        visitDeclarationNode( *it );
-        currentMemberOffset = currentMemberOffset + 4;
-    }
-    */
+    std::cout << "  # Class" << currentClassName << std::endl;
 
     node->visit_children(this);
-    std::cout << "  ######## End Class" << currentClassName << std::endl;
+    std::cout << "  # End Class" << currentClassName << std::endl;
 }
 
 void CodeGenerator::visitMethodNode(MethodNode* node) {
@@ -58,7 +48,7 @@ void CodeGenerator::visitMethodNode(MethodNode* node) {
     currentMethodName = node->identifier->name;
     currentMethodInfo = currentClassInfo.methods->find(currentMethodName)->second;
 
-    std::cout << "  #### Method " << currentMethodName << std::endl;
+    std::cout << "  # Method " << currentMethodName << std::endl;
 
     std::cout << currentClassName << "_" << currentMethodName << ":" << std::endl; //name not printing correctly
     std::cout << "  push %ebp" << std::endl;
@@ -79,23 +69,23 @@ void CodeGenerator::visitMethodNode(MethodNode* node) {
     std::cout << "  pop %ebp" << std::endl;
 
     std::cout << "  ret" << std::endl;
-    std::cout << "  #### End Method " << currentMethodName << std::endl;
+    std::cout << "  # End Method " << currentMethodName << std::endl;
 
 }
 
 void CodeGenerator::visitMethodBodyNode(MethodBodyNode* node) {
 
-    std::cout << "  ## MethodBody" << std::endl;
+    //std::cout << "  # MethodBody" << std::endl;
     node->visit_children(this);
-    std::cout << "  ## End MethodBody" << std::endl;
+    //std::cout << "  # End MethodBody" << std::endl;
 
 }
 
 void CodeGenerator::visitParameterNode(ParameterNode* node) {
 
-    std::cout << "  ## Parameter" << std::endl;
+    std::cout << "  # Parameter" << std::endl;
     node->visit_children(this);
-    std::cout << "  ## End Parameter" << std::endl;
+    std::cout << "  # End Parameter" << std::endl;
 
 }
 
@@ -103,7 +93,7 @@ void CodeGenerator::visitDeclarationNode(DeclarationNode* node) {
 
     int allocSize = 0; // size of the object that we want to allocate.  I think it's 4 + (4*numVariables)
 
-    // std::cout << "  ## Declaration" << std::endl;
+    // std::cout << "  # Declaration" << std::endl;
 
     node->visit_children(this);
     // //taken from Disc. 10 slide 15
@@ -112,223 +102,199 @@ void CodeGenerator::visitDeclarationNode(DeclarationNode* node) {
     // std::cout << "  add  $4, %esp # remove args from stack" << std::endl;
     // std::cout << "  push %eax" << std::endl;
 
-    // std::cout << "  ## End Declaration" << std::endl;
+    // std::cout << "  # End Declaration" << std::endl;
 }
 
 void CodeGenerator::visitReturnStatementNode(ReturnStatementNode* node) {
 
-    std::cout << "  ## ReturnStatement" << std::endl;
+    std::cout << "  # ReturnStatement" << std::endl;
     node->visit_children(this);
     std::cout << "  pop %eax" << std::endl;
-    std::cout << "  ## End ReturnStatement" << std::endl;
+    std::cout << "  # End ReturnStatement" << std::endl;
 }
 
 
 void CodeGenerator::visitAssignmentNode(AssignmentNode* node) {
 
-    //memberOffsetIs
     std::string iden1 = node->identifier_1->name;
     std::string iden2;
 
+    BaseType iden1type = bt_none;
     std::string iden1className = "";
+
     std::string leftClassName = "";
 
-    //for each member ahead, it would be 4
-    //std::cout << "  # Start" << std::endl;
-    auto members = this->classTable->find(currentClassName)->second.members;
-    auto variables = this->currentMethodInfo.variables;
+    VariableTable* currentVariableTable = currentMethodInfo.variables;
 
-    int offset = 0;
-    int maxSuperOffset = 0;
-    //std::cout << "  # Before if" << std::endl;
+    int offset1 = 0;
+    int offset2 = 0;
+    int printedOffset = 0;
 
-    //Check if node->identifier 2 is null.
-    //  If so, check if node->identifier 1 is a member of the current class
-    //  Or in the current method's variableTable
-    if(node->identifier_2 == NULL)
-    {
-        //std::cout << "  # iden1 = " << iden1 << std::endl;
-        //if it is in the variable table get its offset
-        if( variables->find(iden1) != variables->end())
+    int iden1IsVariable = 0;
+    int iden1IsFound = 0;
+
+    int iden2IsVariable = 0;
+    int iden2IsFound = 0;
+
+    std::map<std::string, ClassInfo>::iterator currentClass;
+    
+    // std::cout << " # 137" << std::endl;
+
+    std::string thisVariableString;
+    VariableInfo thisVariableInfo;
+
+        // std::cout << " # 142" << std::endl;
+        //first, check if iden1 is in the currentVariableTable
+
+        auto thisVariable = currentVariableTable->find(iden1);
+
+        if( thisVariable != currentVariableTable->end() )
         {
-            //std::cout << "  # iden1 in variable table " << std::endl;
-            for( auto m = variables->begin(); m != variables->end(); m++)
-            {
-                if(m->first == iden1)
-                {
-                    offset = m->second.offset;
-                }
-                //std::cout << "  # offset = " << offset << std::endl;
-            }
+            thisVariableString = thisVariable->first;
+            thisVariableInfo = thisVariable->second;
+            iden1className = thisVariableInfo.type.objectClassName;
+            offset1 = thisVariableInfo.offset;
+            iden1IsVariable = 1;
         }
 
-        //if it is in current class check all the members
-        if( members->find(iden1) != members->end())
+        // std::cout << " # 156" << std::endl;
+        //else check if iden1 is still a member of the current class
+        currentClass = classTable->find(currentClassName);
+        if( iden1IsVariable == 0 && currentClass != classTable->end() && currentClass->second.members != NULL )
         {
-            //std::cout << "  # iden1 in member table " << std::endl;
-            for( auto m = members->begin(); m != members->end(); m++)
+            thisVariable = currentClass->second.members->find(iden1);
+            if( thisVariable != currentClass->second.members->end() )
             {
-                if(m->first == iden1)
-                {
-                    offset = m->second.offset;
-                }
-                maxSuperOffset = maxSuperOffset + 4;
-                //std::cout << "  # offset = " << offset << std::endl;
-            }
-        }
-    }
-    //Else, check if identifier_1 is in the currentVariableTable as a defined class
-    //  and then check if identifier_2 is in the class' method table
-    else
-    {
-        std::cout << "  # In else " << std::endl;
-
-        iden2 = node->identifier_2->name;
-
-        while(true)
-        {
-            std::cout << "  # In while(true) " << std::endl;
-            //First, check if iden1 is in auto *members
-            auto memberSearch = members->find( iden1 );
-            std::cout << "  # memberSearch " << std::endl;
-            if( memberSearch != members->end() )
-            {
-                //iden1 is in the member table as a class
-                if ( node->basetype == bt_object )
-                    leftClassName = memberSearch->second.type.objectClassName;
-                break;
-            }
-
-            //Else, check if iden1 is a local var. of the current method
-            auto variableSearch = variables->find( iden1 );
-            std::cout << "  # variableSearch " << std::endl;
-            if( variableSearch != variables->end() )
-            {
-                //iden1 is in the variable table as a class
-                if ( node->basetype == bt_object )
-                    leftClassName = variableSearch->second.type.objectClassName;
-                break;
-            }
-         
-            //Else, check if iden1 is a member of a superclass
-            std::string currentSuperClassName = currentClassInfo.superClassName;
-            auto currentSuperClass = classTable->find(currentSuperClassName);
-            std::cout << "  # currentSuperClass " << std::endl;
-
-            //Else, Check if the superclass exists and has members
-            if( currentSuperClass != classTable->end() && currentSuperClass->second.members != NULL )
-            {
-                //check if iden1 is a member of the superclass
-                auto superMemberTableSearch = currentSuperClass->second.members->find(iden1);
-                std::cout << "  # superMemberTableSearch " << std::endl;
-
-                if( superMemberTableSearch != currentSuperClass->second.members->end() )
-                {
-                    //iden1 is in the superclass' member table as a class
-                    if ( node->basetype == bt_object )
-                        leftClassName = superMemberTableSearch->second.type.objectClassName;
-                    break;
-                }
-            }
-        }
-
-        printf("  # iden1Class");
-        auto iden1Class = classTable->find(iden1className);
-
-        //Check if iden2 is a member of iden1
-        std::map<std::string, VariableInfo>::iterator iden1MemberTableSearch = iden1Class->second.members->find(iden2);
-        if( iden1MemberTableSearch != iden1Class->second.members->end() )
-        {
-            //iden2 is a member of iden1
-        }
-        else
-        {
-            //check if the superclass of iden1 exists
-            std::string iden1superClassName = iden1Class->second.superClassName;
-            std::map<std::string, ClassInfo>::iterator iden1superClass = classTable->find(iden1superClassName);
-            
-            //check if iden2 is a member in the superclass of iden1
-            if( iden1superClass != classTable->end() ) {
-                std::map<std::string, VariableInfo>::iterator iden1SuperMemberTableSearch = iden1superClass->second.members->find(iden2);
-                if( iden1SuperMemberTableSearch != iden1superClass->second.members->end() )
-                {
-                    //iden2 is a member of the superclass of iden1
-                    if ( node->basetype == bt_object )
-                        leftClassName = iden1SuperMemberTableSearch->second.type.objectClassName;
-                }
-                else
-                {
-                    //typeError(undefined_member);
-                }
+                thisVariableString = thisVariable->first;
+                thisVariableInfo = thisVariable->second;
+                iden1className = thisVariableInfo.type.objectClassName;
+                offset1 = thisVariableInfo.offset;
+                iden1IsFound = 1;
             }
             else
             {
-                //typeError(undefined_member);
+                offset1 += 4 * ( currentClass->second.members->size() );
             }
         }
+
+        // std::cout << " # 176" << std::endl;
+        //else check if iden1 is still a member of the superclass of the current class
+        if( iden1IsVariable == 0 && currentClass != classTable->end() )
+        {
+            std::string currentSuperClassName = currentClass->second.superClassName;
+            currentClass = classTable->find(currentSuperClassName);
+
+            if( currentClass != classTable->end() && currentClass->second.members != NULL )
+            {
+                thisVariable = currentClass->second.members->find(iden1);
+                if( iden1IsFound == 0 && thisVariable != currentClass->second.members->end() )
+                {
+                    thisVariableString = thisVariable->first;
+                    thisVariableInfo = thisVariable->second;
+                    iden1className = thisVariableInfo.type.objectClassName;
+                    offset1 = thisVariableInfo.offset;
+                    iden1IsFound = 1;
+                }
+                else
+                {
+                    offset1 += 4 * ( currentClass->second.members->size() );
+                }
+            }
+        }
+
+    if( node->identifier_2 )
+    {
+        iden2 = node->identifier_2->name;
+
+        // std::cout << " # iden1className = " << iden1className << std::endl;
+        // std::cout << " # currentClass = " << currentClass->first << std::endl;
+        // std::cout << " # 205; offset2 = " << offset2 << std::endl;
+
+        currentClass = classTable->find(iden1className);
+        thisVariable = currentClass->second.members->find(iden2);
+
+        //else check if iden1 is still a member of the current class
+        if( currentClass != classTable->end() && currentClass->second.members != NULL )
+        {
+            // std::cout << " # 213; offset2 = " << offset2 << std::endl;
+            thisVariable = currentClass->second.members->find(iden2);
+            if( thisVariable != currentClass->second.members->end() )
+            {
+                // std::cout << " # 217; offset2 = " << offset2 << std::endl;
+                thisVariableString = thisVariable->first;
+                thisVariableInfo = thisVariable->second;
+                offset2 = thisVariableInfo.offset;
+                iden2IsFound = 1;
+            }
+            else
+            {
+                // std::cout << " # 225; offset2 = " << offset2 << std::endl;
+                offset2 += 4 * ( currentClass->second.members->size() );
+            }
+        }
+
+        // std::cout << " # 230; offset2 = " << offset2 << std::endl;
+        //else check if iden1 is still a member of the superclass of the current class
+        if( currentClass != classTable->end() )
+        {
+            // std::cout << " # 234; offset2 = " << offset2 << std::endl;
+            std::string currentSuperClassName = currentClass->second.superClassName;
+            currentClass = classTable->find(currentSuperClassName);
+
+            if( currentClass != classTable->end() && currentClass->second.members != NULL )
+            {
+                // std::cout << " # 240; offset2 = " << offset2 << std::endl;
+                thisVariable = currentClass->second.members->find(iden2);
+                if( iden2IsFound == 0 && thisVariable != currentClass->second.members->end() )
+                {
+                    // std::cout << " # 244; offset2 = " << offset2 << std::endl;
+                    thisVariableString = thisVariable->first;
+                    thisVariableInfo = thisVariable->second;
+                    offset2 = thisVariableInfo.offset;
+                    iden2IsFound = 1;
+                }
+                else
+                {
+                    // std::cout << " # 252; offset2 = " << offset2 << std::endl;
+                    offset2 += 4 * ( currentClass->second.members->size() );
+                }
+            }
+        }
+        // std::cout << " # 257; offset2 = " << offset2 << std::endl;
     }
-
-
-
-
-    // if(members->find(iden1) != members->end()){//if it is in current class check all the members
-    //     std::cout << "  # In if " << std::endl;
-    //     for( auto m = members->begin(); m != members->end(); m++)
-    //     {
-    //         if(m->first == iden1)
-    //         {
-    //             offset = m->second.offset;
-    //         }
-    //         iteration = iteration + 4;
-    //     }
-    // }
-    // else{//if it is in the superclass
-    //     std::cout << "  # In else" << std::endl;
-    //     std::string superClassName = this->classTable->find(currentClassName)->second.superClassName;
-    //     auto SuperMembers = this->classTable->find(superClassName)->second.members;
-
-    //     std::cout << "  # Start" << std::endl;
-    //     for( auto m = members->begin(); m != members->end(); m++)
-    //     {
-    //         std::cout << "  # For" << std::endl;
-    //         if(m->first == iden1)
-    //         {
-    //             offset = m->second.offset;
-    //         }
-    //         iteration = iteration + 4;
-    //     }
-    // }
-
-
-
-    std::string variable = node->identifier_1->name;
 
     //work on an offset calculator
 
-    std::cout << "  ## Assignment" << std::endl;
+    std::cout << "  # Assignment" << std::endl;
     node->visit_children(this);
-    if( this->currentMethodInfo.variables->find(variable) != this->currentMethodInfo.variables->end() )
-    {        
-        //offset = this->currentMethodInfo.variables->at(variable).offset;
-        std::cout << "  pop " << offset << "(%ebp)" << std::endl;
+
+    if( node->identifier_2 != NULL )
+    {
+        std::cout << "  mov " << offset1 << "(%ebp), %ebx" << std::endl;
+        std::cout << "  pop " << offset2 << "(%ebp)" << std::endl;
     }
-    std::cout << "  ## End Assignment" << std::endl;
+    else
+    {
+        std::cout << "  pop " << offset1 << "(%ebp)" << std::endl;
+    }
+
+    std::cout << "  # End Assignment" << std::endl;
 
 }
 
 
 void CodeGenerator::visitCallNode(CallNode* node) {
 
-    std::cout << "  ## Call" << std::endl;
+    std::cout << "  # Call" << std::endl;
     node->visit_children(this);
     std::cout << "   add $4, %esp" << std::endl;
-    std::cout << "  ## End Call" << std::endl;
+    std::cout << "  # End Call" << std::endl;
 
 }
 
 void CodeGenerator::visitIfElseNode(IfElseNode* node) {
     
-    std::cout << "  ## If/Else" << std::endl;
+    std::cout << "  # If-Else" << std::endl;
 
     int thisLabel = nextLabel();
 
@@ -365,12 +331,12 @@ void CodeGenerator::visitIfElseNode(IfElseNode* node) {
 
     std::cout << "  endif" << thisLabel << ":" << std::endl;
 
-    std::cout << "  ## End If/Else" << std::endl;
+    std::cout << "  # End If-Else" << std::endl;
 }
 
 void CodeGenerator::visitWhileNode(WhileNode* node) {
 
-    std::cout << "  ## While" << std::endl;
+    std::cout << "  # While" << std::endl;
 
     int thisLabel = nextLabel();
     std::cout << "  while" << thisLabel << ":" << std::endl;
@@ -393,14 +359,14 @@ void CodeGenerator::visitWhileNode(WhileNode* node) {
     std::cout << "  jmp while" << thisLabel << std::endl;
     std::cout << "  endwhile" << thisLabel << ":" << std::endl;
 
-    std::cout << "  ## End While" << std::endl;
+    std::cout << "  # End While" << std::endl;
 
 }
 
 
 void CodeGenerator::visitPrintNode(PrintNode* node) {
     
-    std::cout << "  ## Print" << std::endl;
+    std::cout << "  # Print" << std::endl;
 
     std::cout << "  push %eax" << std::endl;
     std::cout << "  push %ecx" << std::endl;
@@ -416,7 +382,7 @@ void CodeGenerator::visitPrintNode(PrintNode* node) {
     std::cout << "  pop %ecx" << std::endl;
     std::cout << "  pop %eax" << std::endl;
 
-    std::cout << "  ## End Print" << std::endl;
+    std::cout << "  # End Print" << std::endl;
 }
 
 
@@ -424,7 +390,7 @@ void CodeGenerator::visitDoWhileNode(DoWhileNode* node) {
 
     int thisLabel = nextLabel();
 
-    std::cout << "  ## Do-While" << std::endl;
+    std::cout << "  # Do-While" << std::endl;
     std::cout << "  dowhile" << thisLabel << ":" << std::endl;
     
     if (node->statement_list)
@@ -442,13 +408,13 @@ void CodeGenerator::visitDoWhileNode(DoWhileNode* node) {
     std::cout << "  cmp $0, %eax" << std::endl;
     std::cout << "  jne dowhile" << thisLabel << std::endl;
 
-    std::cout << "  ## End Do-While" << std::endl;
+    std::cout << "  # End Do-While" << std::endl;
 
 }
 
 void CodeGenerator::visitPlusNode(PlusNode* node) {
 
-    std::cout << "  ## Plus" << std::endl;
+    std::cout << "  # Plus" << std::endl;
 
     node->visit_children(this);
 
@@ -457,12 +423,12 @@ void CodeGenerator::visitPlusNode(PlusNode* node) {
     std::cout << "  add %ebx, %eax" << std::endl;
     std::cout << "  push %eax" << std::endl;
 
-    std::cout << "  ## End Plus" << std::endl;
+    std::cout << "  # End Plus" << std::endl;
 }
 
 void CodeGenerator::visitMinusNode(MinusNode* node) {
 
-    std::cout << "  ## Minus" << std::endl;
+    std::cout << "  # Minus" << std::endl;
 
     node->visit_children(this);
 
@@ -471,26 +437,26 @@ void CodeGenerator::visitMinusNode(MinusNode* node) {
     std::cout << "  sub %ebx, %eax" << std::endl;
     std::cout << "  push %eax" << std::endl;
 
-    std::cout << "  ## End Minus" << std::endl;
+    std::cout << "  # End Minus" << std::endl;
 }
 
 void CodeGenerator::visitTimesNode(TimesNode* node) {
 
-    std::cout << "  ## Times" << std::endl;
+    std::cout << "  # Times" << std::endl;
     node->visit_children(this);
     std::cout << "  pop %ebx" << std::endl;
     std::cout << "  pop %eax" << std::endl;
     std::cout << "  imul %ebx, %eax" << std::endl;
     std::cout << "  push %eax" << std::endl;
 
-    std::cout << "  ## End Times" << std::endl;
+    std::cout << "  # End Times" << std::endl;
 
 }
 
 void CodeGenerator::visitDivideNode(DivideNode* node) {
 
     //ask the professor
-    std::cout << "  ## Divide" << std::endl;
+    std::cout << "  # Divide" << std::endl;
     node->visit_children(this);
     std::cout << "  pop %ebx" << std::endl;
     std::cout << "  pop %eax" << std::endl;
@@ -498,13 +464,13 @@ void CodeGenerator::visitDivideNode(DivideNode* node) {
     std::cout << "  idiv %ebx" << std::endl;
     std::cout << "  push %eax" << std::endl;
 
-    std::cout << "  ## End Divide" << std::endl;
+    std::cout << "  # End Divide" << std::endl;
 
 }
 
 void CodeGenerator::visitGreaterNode(GreaterNode* node) {
 
-    std::cout << "  ## Greater" << std::endl;
+    std::cout << "  # Greater" << std::endl;
     node->visit_children(this);
     
     std::cout << "  pop %ebx" << std::endl;
@@ -514,13 +480,13 @@ void CodeGenerator::visitGreaterNode(GreaterNode* node) {
     std::cout << "  setg %dl" << std::endl;
     std::cout << "  push %edx" << std::endl;
 
-    std::cout << "  ## End Greater" << std::endl;
+    std::cout << "  # End Greater" << std::endl;
 
 }
 
 void CodeGenerator::visitGreaterEqualNode(GreaterEqualNode* node) {
 
-    std::cout << "  ## GreaterEqual" << std::endl;
+    std::cout << "  # GreaterEqual" << std::endl;
     node->visit_children(this);
 
     std::cout << "  pop %ebx" << std::endl;
@@ -530,12 +496,12 @@ void CodeGenerator::visitGreaterEqualNode(GreaterEqualNode* node) {
     std::cout << "  setge %dl" << std::endl;
     std::cout << "  push %edx" << std::endl;
 
-    std::cout << "  ## End GreaterEqual" << std::endl;
+    std::cout << "  # End GreaterEqual" << std::endl;
 }
 
 void CodeGenerator::visitEqualNode(EqualNode* node) {
 
-    std::cout << "  ## Equal" << std::endl;
+    std::cout << "  # Equal" << std::endl;
     node->visit_children(this);
 
     std::cout << "  pop %ebx" << std::endl;
@@ -545,50 +511,50 @@ void CodeGenerator::visitEqualNode(EqualNode* node) {
     std::cout << "  sete %dl" << std::endl;
     std::cout << "  push %edx" << std::endl;
 
-    std::cout << "  ## End Equal" << std::endl;
+    std::cout << "  # End Equal" << std::endl;
 }
 
 void CodeGenerator::visitAndNode(AndNode* node) {
 
-    std::cout << "  ## And" << std::endl;
+    std::cout << "  # And" << std::endl;
     node->visit_children(this);
     std::cout << "  pop %ebx" << std::endl;
     std::cout << "  pop %eax" << std::endl;
     std::cout << "  and %ebx, %eax" << std::endl;
     std::cout << "  push %eax" << std::endl;
-    std::cout << "  ## End And" << std::endl;
+    std::cout << "  # End And" << std::endl;
 }
 
 void CodeGenerator::visitOrNode(OrNode* node) {
 
-    std::cout << "  ## Or" << std::endl;
+    std::cout << "  # Or" << std::endl;
     node->visit_children(this);
     std::cout << "  pop %ebx" << std::endl;
     std::cout << "  pop %eax" << std::endl;
     std::cout << "  or %ebx, %eax" << std::endl;
     std::cout << "  push %eax" << std::endl;
-    std::cout << "  ## End Or" << std::endl;
+    std::cout << "  # End Or" << std::endl;
 }
 
 void CodeGenerator::visitNotNode(NotNode* node) {
 
-    std::cout << "  ## Not" << std::endl;
+    std::cout << "  # Not" << std::endl;
     node->visit_children(this);
     std::cout << "  pop %eax" << std::endl;
     std::cout << "  not %eax" << std::endl;
     std::cout << "  push %eax" << std::endl;
-    std::cout << "  ## End Not" << std::endl;
+    std::cout << "  # End Not" << std::endl;
 }
 
 void CodeGenerator::visitNegationNode(NegationNode* node) {
     
-    std::cout << "  ## Negation" << std::endl;
+    std::cout << "  # Negation" << std::endl;
     node->visit_children(this);
     std::cout << "  pop %eax" << std::endl;
     std::cout << "  neg %eax" << std::endl;
     std::cout << "  push %eax" << std::endl;
 
-    std::cout << "  ## End Negation" << std::endl;
+    std::cout << "  # End Negation" << std::endl;
 }
 
 void CodeGenerator::visitMethodCallNode(MethodCallNode* node) {
@@ -750,7 +716,7 @@ void CodeGenerator::visitMethodCallNode(MethodCallNode* node) {
 
     printedOffset = offset-4;
 
-    std::cout << "  ## MethodCall" << std::endl;
+    std::cout << "  # MethodCall" << std::endl;
 
     std::cout << "  push %eax" << std::endl;
     std::cout << "  push %ecx" << std::endl;
@@ -781,7 +747,7 @@ void CodeGenerator::visitMethodCallNode(MethodCallNode* node) {
     std::cout << "  pop %ecx" << std::endl;
     std::cout << "  xchg (%esp), %eax" << std::endl;
 
-    std::cout << "  ## End MethodCall" << std::endl;
+    std::cout << "  # End MethodCall" << std::endl;
 
 }
 
@@ -792,7 +758,7 @@ void CodeGenerator::visitMemberAccessNode(MemberAccessNode* node) {
     std::string classObjectMember = node->identifier_2->name;
     int offset = 0;
     int iteration = 0;
-    std::cout << "  ## MemberAccess" << std::endl;
+    std::cout << "  # MemberAccess" << std::endl;
     std::cout << "  # Find class object (identifier 1) in declared objects" << std::endl;
     node->visit_children(this);
     if( currentClassInfo.members->find(classObjectMember) != currentClassInfo.members->end() )
@@ -832,7 +798,7 @@ void CodeGenerator::visitMemberAccessNode(MemberAccessNode* node) {
             }
         }
     }
-    std::cout << "  ## End MemberAccess" << std::endl;
+    std::cout << "  # End MemberAccess" << std::endl;
 
 }
 
@@ -843,7 +809,7 @@ void CodeGenerator::visitVariableNode(VariableNode* node) {
 
     int offset = 0;
 
-    std::cout << "  ## Variable" << std::endl;
+    std::cout << "  # Variable " << variable << std::endl;
     node->visit_children(this);
     if( currentMethodInfo.variables->find(variable) != currentMethodInfo.variables->end() )
     {        
@@ -856,32 +822,32 @@ void CodeGenerator::visitVariableNode(VariableNode* node) {
         offset = currentClassInfo.members->at(variable).offset;
         std::cout << "  push " << offset << "(%ebp)" << std::endl;
     }
-    std::cout << "  ## End Variable" << std::endl;
+    std::cout << "  # End Variable " << variable << std::endl;
 }
 
 void CodeGenerator::visitIntegerLiteralNode(IntegerLiteralNode* node) {
 
-    std::cout << "  ## IntLiteral" << std::endl;
+    std::cout << "  # Integer Literal" << std::endl;
     node->visit_children(this);
     std::cout << "  push $" << node->integer->value << std::endl;
-    std::cout << "  ## End IntLiteral" << std::endl;
+    std::cout << "  # End Integer Literal" << std::endl;
 }
 
 void CodeGenerator::visitBooleanLiteralNode(BooleanLiteralNode* node) {
-    std::cout << "  ## BoolLiteral" << std::endl;
+    std::cout << "  # BoolLiteral" << std::endl;
     node->visit_children(this);
     std::cout << "  push $" << node->integer->value << std::endl;
-    std::cout << "  ## End BoolLiteral" << std::endl;
+    std::cout << "  # End BoolLiteral" << std::endl;
 }
 
 void CodeGenerator::visitNewNode(NewNode* node) {
-    std::cout << "  ## NewNode" << std::endl;
+    std::cout << "  # NewNode" << std::endl;
     node->visit_children(this);
     std::cout << "  push $8" << std::endl;
     std::cout << "  call malloc" << std::endl;
     std::cout << "  add $4, %esp" << std::endl;
     std::cout << "  push %eax" << std::endl;
-    std::cout << "  ## End NewNode" << std::endl;}
+    std::cout << "  # End NewNode" << std::endl;}
 
 //starting here I don't think we write anything else
 void CodeGenerator::visitIntegerTypeNode(IntegerTypeNode* node) {
