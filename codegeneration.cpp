@@ -563,6 +563,7 @@ void CodeGenerator::visitNegationNode(NegationNode* node) {
 
 void CodeGenerator::visitMethodCallNode(MethodCallNode* node) {
 
+/*
     //memberOffsetIs
     std::string iden1 = node->identifier_1->name;
     std::string iden2;
@@ -694,8 +695,191 @@ void CodeGenerator::visitMethodCallNode(MethodCallNode* node) {
             }
         }
     }
+*/
+    std::string iden1 = node->identifier_1->name;
+    std::string iden2;
 
+    BaseType iden1type = bt_none;
+    std::string iden1className = "";
+    std::string iden2className = "";
 
+    VariableTable* currentVariableTable = currentMethodInfo.variables;
+
+    int offset1 = 0;
+
+    int iden1IsVariable = 0;
+    int iden1IsFound = 0;
+
+    int iden2IsVariable = 0;
+    int iden2IsFound = 0;
+
+    std::map<std::string, ClassInfo>::iterator currentClass;
+    
+    // std::cout << " # 137" << std::endl;
+
+    std::string thisVariableString;
+    VariableInfo thisVariableInfo;
+
+    std::string thisMethodString;
+    MethodInfo thisMethodInfo;
+
+        // std::cout << " # 142" << std::endl;
+        //first, check if iden1 is in the currentVariableTable
+
+    if( node->identifier_2 != NULL )
+    {
+        iden2 = node->identifier_2->name;
+
+        auto thisVariable = currentVariableTable->find(iden1);
+
+        if( thisVariable != currentVariableTable->end() )
+        {
+            thisVariableString = thisVariable->first;
+            thisVariableInfo = thisVariable->second;
+            iden1className = thisVariableInfo.type.objectClassName;
+            offset1 = thisVariableInfo.offset;
+            iden1IsVariable = 1;
+        }
+
+        // std::cout << " # 156" << std::endl;
+        //else check if iden1 is still a member of the current class
+        currentClass = classTable->find(currentClassName);
+        if( iden1IsVariable == 0 && currentClass != classTable->end() && currentClass->second.members != NULL )
+        {
+            thisVariable = currentClass->second.members->find(iden1);
+            if( thisVariable != currentClass->second.members->end() )
+            {
+                thisVariableString = thisVariable->first;
+                thisVariableInfo = thisVariable->second;
+                iden1className = thisVariableInfo.type.objectClassName;
+                offset1 = thisVariableInfo.offset;
+                iden1IsFound = 1;
+            }
+        }
+
+        // std::cout << " # 176" << std::endl;
+        //else check if iden1 is still a member of the superclass of the current class
+
+        if( iden1IsVariable == 0 && currentClass != classTable->end() )
+        {
+            std::string currentSuperClassName = currentClass->second.superClassName;
+            currentClass = classTable->find(currentSuperClassName);
+
+            if( currentClass != classTable->end() && currentClass->second.members != NULL )
+            {
+                thisVariable = currentClass->second.members->find(iden1);
+                if( iden1IsFound == 0 && thisVariable != currentClass->second.members->end() )
+                {
+                    thisVariableString = thisVariable->first;
+                    thisVariableInfo = thisVariable->second;
+                    iden1className = thisVariableInfo.type.objectClassName;
+                    offset1 = thisVariableInfo.offset;
+                    iden1IsFound = 1;
+                }
+                else
+                {
+                    offset1 += 4 * ( currentClass->second.members->size() );
+                }
+            }
+        }
+
+        // std::cout << " # iden1className = " << iden1className << std::endl;
+        // std::cout << " # currentClass = " << currentClass->first << std::endl;
+        // std::cout << " # 205; offset2 = " << offset2 << std::endl;
+
+        currentClass = classTable->find(iden1className);
+        auto thisMethod = currentClass->second.methods->find(iden2);
+
+        //else check if iden1 is still a member of the current class
+        if( currentClass != classTable->end() && currentClass->second.methods != NULL )
+        {
+            // std::cout << " # 213; offset2 = " << offset2 << std::endl;
+            thisMethod = currentClass->second.methods->find(iden2);
+            if( thisMethod != currentClass->second.methods->end() )
+            {
+                // std::cout << " # 217; offset2 = " << offset2 << std::endl;
+                iden2className = currentClass->first;
+                thisMethodString = thisMethod->first;
+                thisMethodInfo = thisMethod->second;
+                iden2IsFound = 1;
+            }
+        }
+
+        // std::cout << " # 230; offset2 = " << offset2 << std::endl;
+        //else check if iden1 is still a member of the superclass of the current class
+        if( currentClass != classTable->end() )
+        {
+            // std::cout << " # 234; offset2 = " << offset2 << std::endl;
+            std::string currentSuperClassName = currentClass->second.superClassName;
+            currentClass = classTable->find(currentSuperClassName);
+
+            if( currentClass != classTable->end() && currentClass->second.methods != NULL )
+            {
+                // std::cout << " # 240; offset2 = " << offset2 << std::endl;
+                thisMethod = currentClass->second.methods->find(iden2);
+                if( iden2IsFound == 0 && thisMethod != currentClass->second.methods->end() )
+                {
+                    // std::cout << " # 244; offset2 = " << offset2 << std::endl;
+                    iden2className = currentClass->first;
+                    thisMethodString = thisMethod->first;
+                    thisMethodInfo = thisMethod->second;
+                    iden2IsFound = 1;
+                }
+            }
+        }
+        // std::cout << " # 257; offset2 = " << offset2 << std::endl;
+    }
+    else
+    {
+        offset1 = 0;
+
+        currentClass = classTable->find(currentClassName);
+        auto thisMethod = currentClass->second.methods->find(iden2);
+
+        //std::cout << "      # 839; currentClass = " << currentClass->first << std::endl;
+        //std::cout << "      # 840; currentClassName = " << currentClassName << std::endl;
+        //std::cout << "      # 841; iden2className = " << iden2className << std::endl;
+
+        //else check if iden1 is still a member of the current class
+        if( currentClass != classTable->end() && currentClass->second.methods != NULL )
+        {
+            // std::cout << " # 213; offset2 = " << offset2 << std::endl;
+            thisMethod = currentClass->second.methods->find(iden1);
+            if( thisMethod != currentClass->second.methods->end() )
+            {
+                        //std::cout << "      # 839; currentClass = " << currentClass->first << std::endl;
+                        //std::cout << "      # 851; currentClassName = " << currentClassName << std::endl;
+                        //std::cout << "      # 852; iden2className = " << iden2className << std::endl;
+                iden2className = currentClass->first;
+                thisMethodString = thisMethod->first;
+                thisMethodInfo = thisMethod->second;
+                iden2IsFound = 1;
+            }
+        }
+
+        // std::cout << " # 230; offset2 = " << offset2 << std::endl;
+        //else check if iden1 is still a member of the superclass of the current class
+        if( currentClass != classTable->end() )
+        {
+            // std::cout << " # 234; offset2 = " << offset2 << std::endl;
+            std::string currentSuperClassName = currentClass->second.superClassName;
+            currentClass = classTable->find(currentSuperClassName);
+
+            if( currentClass != classTable->end() && currentClass->second.methods != NULL )
+            {
+                // std::cout << " # 240; offset2 = " << offset2 << std::endl;
+                thisMethod = currentClass->second.methods->find(iden1);
+                if( iden2IsFound == 0 && thisMethod != currentClass->second.methods->end() )
+                {
+                    // std::cout << " # 244; offset2 = " << offset2 << std::endl;
+                    iden2className = currentClass->first;
+                    thisMethodString = thisMethod->first;
+                    thisMethodInfo = thisMethod->second;
+                    iden2IsFound = 1;
+                }
+            }
+        }
+    }
 
     //obtain method information
     
@@ -703,6 +887,7 @@ void CodeGenerator::visitMethodCallNode(MethodCallNode* node) {
     //if(node->identifier_2 != NULL)
     //        thisMethod = methods->find(iden2);
 
+    /*
     for( auto it = thisMethod.variables->begin();
             it != thisMethod.variables->end(); it++ )
     {
@@ -723,8 +908,9 @@ void CodeGenerator::visitMethodCallNode(MethodCallNode* node) {
             // }
         }
     }
+    */
 
-    printedOffset = offset-4;
+    //printedOffset = offset-4;
 
     std::cout << "  # MethodCall" << std::endl;
 
@@ -732,27 +918,28 @@ void CodeGenerator::visitMethodCallNode(MethodCallNode* node) {
     std::cout << "  push %ecx" << std::endl;
     std::cout << "  push %edx" << std::endl;
 
+    int addOffset = 0;
+
     if (node->expression_list)
     {
         for(std::list<ExpressionNode*>::reverse_iterator iter = node->expression_list->rbegin();
             iter != node->expression_list->rend(); iter++) 
         {
+            addOffset += 4;
             (*iter)->accept(this);
         }
     }
 
     //std::cout << "  push " << offset << "(%ebp)" << std::endl;
-    std::cout << "  push " << printedOffset << "(%ebp)" << std::endl;
+    std::cout << "  push " << offset1 << "(%ebp)" << std::endl;
+
     if( node->identifier_2 == NULL )
-        std::cout << "  call " << iden1className << "_" << iden1 << std::endl;
+        std::cout << "  call " << iden2className << "_" << iden1 << std::endl;
     else
-        std::cout << "  call " << iden1className << "_" << iden2 << std::endl;
+        std::cout << "  call " << iden2className << "_" << iden2 << std::endl;
     //std::cout << "  add $"<< -offset <<", %esp" << std::endl;
 
-    if(printedOffset == -4)
-        printedOffset = 4;
-
-    std::cout << "  add $"<< printedOffset <<", %esp" << std::endl;
+    std::cout << "  add $"<< addOffset <<", %esp" << std::endl;
     std::cout << "  pop %edx" << std::endl;
     std::cout << "  pop %ecx" << std::endl;
     std::cout << "  xchg (%esp), %eax" << std::endl;
