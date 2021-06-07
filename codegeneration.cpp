@@ -37,10 +37,10 @@ void CodeGenerator::visitClassNode(ClassNode* node) {
     currentClassName = node->identifier_1->name;
     currentClassInfo = this->classTable->find(currentClassName)->second;
 
-    std::cout << "  # Class" << currentClassName << std::endl;
+    std::cout << "  # Class " << currentClassName << std::endl;
 
     node->visit_children(this);
-    std::cout << "  # End Class" << currentClassName << std::endl;
+    std::cout << "  # End Class " << currentClassName << std::endl;
 }
 
 void CodeGenerator::visitMethodNode(MethodNode* node) {
@@ -83,9 +83,9 @@ void CodeGenerator::visitMethodBodyNode(MethodBodyNode* node) {
 
 void CodeGenerator::visitParameterNode(ParameterNode* node) {
 
-    std::cout << "  # Parameter" << std::endl;
+    //std::cout << "  # Parameter" << std::endl;
     node->visit_children(this);
-    std::cout << "  # End Parameter" << std::endl;
+    //std::cout << "  # End Parameter" << std::endl;
 
 }
 
@@ -606,6 +606,7 @@ void CodeGenerator::visitMethodCallNode(MethodCallNode* node) {
                     std::map<std::string, MethodInfo>::iterator superMethodTableSearch = currentSuperClass->second.methods->find(iden1);
                     if( superMethodTableSearch != currentSuperClass->second.methods->end() )
                     {
+                        iden1className = currentSuperClass->first;
                         thisMethod = superMethodTableSearch->second;
                         break;
                     }
@@ -636,7 +637,9 @@ void CodeGenerator::visitMethodCallNode(MethodCallNode* node) {
                 std::map<std::string, VariableInfo>::iterator memberTableSearch = currentClass->second.members->find(iden1);
                 if( memberTableSearch != currentClass->second.members->end() )
                 {
-                    iden1className = memberTableSearch->second.type.objectClassName;
+                    //iden1className = memberTableSearch->second.type.objectClassName;
+                    //iden1className = currentSuperClass->first;
+                    iden1className = currentClass->first;
                     break;
                 }
             }
@@ -651,7 +654,7 @@ void CodeGenerator::visitMethodCallNode(MethodCallNode* node) {
                     std::map<std::string, VariableInfo>::iterator superMemberTableSearch = currentSuperClass->second.members->find(iden1);
                     if( superMemberTableSearch != currentSuperClass->second.members->end() )
                     {
-                        iden1className = superMemberTableSearch->second.type.objectClassName;
+                        iden1className = currentSuperClass->first;
                         break;
                     }
                 }
@@ -979,7 +982,7 @@ void CodeGenerator::visitNewNode(NewNode* node) {
         }
     }
 
-    std::cout << "  # New" << std::endl;
+    std::cout << " # NEW" << std::endl;
 
     std::cout << " push $" << (4 * numMembers) << std::endl;
     std::cout << " call malloc" << std::endl;
@@ -1020,7 +1023,7 @@ void CodeGenerator::visitNewNode(NewNode* node) {
     {
         std::cout << " push %eax" << std::endl;
     }
-    std::cout << "  # End New" << std::endl;
+    //std::cout << "  # End New" << std::endl;
     }
 
 //starting here I don't think we write anything else
