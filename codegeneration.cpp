@@ -542,7 +542,7 @@ void CodeGenerator::visitNotNode(NotNode* node) {
     std::cout << "  # Not" << std::endl;
     node->visit_children(this);
     std::cout << "  pop %eax" << std::endl;
-    std::cout << "  not %eax" << std::endl;
+    std::cout << "  xor $1, %eax" << std::endl;
     std::cout << "  push %eax" << std::endl;
     std::cout << "  # End Not" << std::endl;
 }
@@ -563,139 +563,192 @@ void CodeGenerator::visitNegationNode(NegationNode* node) {
 
 void CodeGenerator::visitMethodCallNode(MethodCallNode* node) {
 
-    //memberOffsetIs
     std::string iden1 = node->identifier_1->name;
     std::string iden2;
 
+    BaseType iden1type = bt_none;
     std::string iden1className = "";
+    std::string iden2className = "";
 
-    int offset = 0;
-    //find the lowest offset of a parameter
-    int nextLowestOffest = 12;
-    int printedOffset = -4;
+    VariableTable* currentVariableTable = currentMethodInfo.variables;
 
-    auto currentMethodTable = currentClassInfo.methods;
-    auto currentVariableTable = currentMethodInfo.variables;
+    int offset1 = 0;
 
-    MethodInfo thisMethod;
+    int iden1IsVariable = 0;
+    int iden1IsFound = 0;
 
-    if(node->identifier_2 == NULL)
+    int iden2IsVariable = 0;
+    int iden2IsFound = 0;
+
+    std::map<std::string, ClassInfo>::iterator currentClass;
+    
+    // std::cout << " # 137" << std::endl;
+
+    std::string thisVariableString;
+    VariableInfo thisVariableInfo;
+
+    std::string thisMethodString;
+    MethodInfo thisMethodInfo;
+
+        // std::cout << " # 142" << std::endl;
+        //first, check if iden1 is in the currentVariableTable
+
+    if( node->identifier_2 != NULL )
     {
-        iden1className = currentClassName;
-
-        while(true)
-        {
-            //first, check if iden1 is in the currentVariableTable
-            auto MethodTableSearch = currentMethodTable->find(iden1);
-            if( MethodTableSearch != currentMethodTable->end() )
-            {
-                thisMethod = MethodTableSearch->second;
-                break;
-            }
-
-            std::map<std::string, ClassInfo>::iterator currentClass = classTable->find(currentClassName);
-
-            //else check if iden1 is still a method of the superclass of the current class
-            if( currentClass != classTable->end() )
-            {
-                std::string currentSuperClassName = currentClass->second.superClassName;
-                std::map<std::string, ClassInfo>::iterator currentSuperClass = classTable->find(currentSuperClassName);
-
-                if( currentSuperClass != classTable->end() && currentSuperClass->second.methods != NULL )
-                {
-                    std::map<std::string, MethodInfo>::iterator superMethodTableSearch = currentSuperClass->second.methods->find(iden1);
-                    if( superMethodTableSearch != currentSuperClass->second.methods->end() )
-                    {
-                        iden1className = currentSuperClass->first;
-                        thisMethod = superMethodTableSearch->second;
-                        break;
-                    }
-                }
-            }
-        }
-    }
-    else
-    {
-        //  if identifier_2 does exist, check if identifier_1 is in the currentVariableTable as a defined class
-        //  and then check if identifier_2 is in the class' method table
         iden2 = node->identifier_2->name;
 
-        while(true)
-        {
-            //first, check if iden1 is in the currentVariableTable
-            std::map<std::string, VariableInfo>::iterator variableTableSearch = currentVariableTable->find(iden1);
-            if( variableTableSearch != currentVariableTable->end() )
-            {
-                iden1className = variableTableSearch->second.type.objectClassName;
-                break;
-            }
+        auto thisVariable = currentVariableTable->find(iden1);
 
-            //else check if iden1 is still a member of the current class
-            std::map<std::string, ClassInfo>::iterator currentClass = classTable->find(currentClassName);
+        if( thisVariable != currentVariableTable->end() )
+        {
+            thisVariableString = thisVariable->first;
+            thisVariableInfo = thisVariable->second;
+            iden1className = thisVariableInfo.type.objectClassName;
+            offset1 = thisVariableInfo.offset;
+            iden1IsVariable = 1;
+        }
+
+        // std::cout << " # 156" << std::endl;
+        //else check if iden1 is still a member of the current class
+        currentClass = classTable->find(currentClassName);
+        if( iden1IsVariable == 0 && currentClass != classTable->end() && currentClass->second.members != NULL )
+        {
+            thisVariable = currentClass->second.members->find(iden1);
+            if( thisVariable != currentClass->second.members->end() )
+            {
+                thisVariableString = thisVariable->first;
+                thisVariableInfo = thisVariable->second;
+                iden1className = thisVariableInfo.type.objectClassName;
+                offset1 = thisVariableInfo.offset;
+                iden1IsFound = 1;
+            }
+        }
+
+        // std::cout << " # 176" << std::endl;
+        //else check if iden1 is still a member of the superclass of the current class
+
+        if( iden1IsVariable == 0 && currentClass != classTable->end() )
+        {
+            std::string currentSuperClassName = currentClass->second.superClassName;
+            currentClass = classTable->find(currentSuperClassName);
+
             if( currentClass != classTable->end() && currentClass->second.members != NULL )
             {
-                std::map<std::string, VariableInfo>::iterator memberTableSearch = currentClass->second.members->find(iden1);
-                if( memberTableSearch != currentClass->second.members->end() )
+                thisVariable = currentClass->second.members->find(iden1);
+                if( iden1IsFound == 0 && thisVariable != currentClass->second.members->end() )
                 {
-                    //iden1className = memberTableSearch->second.type.objectClassName;
-                    //iden1className = currentSuperClass->first;
-                    iden1className = currentClass->first;
-                    break;
-                }
-            }
-         
-            //check if the superclass of the current class exists
-            if( currentClass != classTable->end() )
-            {
-                std::string currentSuperClassName = currentClass->second.superClassName;
-                std::map<std::string, ClassInfo>::iterator currentSuperClass = classTable->find(currentSuperClassName);
-                if( currentSuperClass != classTable->end() )
-                {
-                    std::map<std::string, VariableInfo>::iterator superMemberTableSearch = currentSuperClass->second.members->find(iden1);
-                    if( superMemberTableSearch != currentSuperClass->second.members->end() )
-                    {
-                        iden1className = currentSuperClass->first;
-                        break;
-                    }
-                }
-            }
-        }
-
-        //check if the class type of identifier_1 is in the classTable
-        std::map<std::string, ClassInfo>::iterator iden1Class = classTable->find(iden1className);
-
-        //make sure the iden2 is a method in the class of iden1, else return error
-        std::map<std::string, MethodInfo>::iterator iden1MethodTableSearch = iden1Class->second.methods->find(iden2);
-        if( iden1MethodTableSearch != iden1Class->second.methods->end() )
-        {
-            thisMethod = iden1MethodTableSearch->second;
-        }
-        else
-        {
-            //check if iden2 is a method in the superclass of iden1
-            std::string iden1superClassName = iden1Class->second.superClassName;
-
-            //iden1className = iden1superClassName;
-
-            std::map<std::string, ClassInfo>::iterator iden1superClass = classTable->find(iden1superClassName);
-            if( iden1superClass != classTable->end() )
-            {
-                std::map<std::string, MethodInfo>::iterator iden1SuperMethodTableSearch = iden1superClass->second.methods->find(iden2);
-                if( iden1SuperMethodTableSearch != iden1superClass->second.methods->end() )
-                {
-                    thisMethod = iden1SuperMethodTableSearch->second;
+                    thisVariableString = thisVariable->first;
+                    thisVariableInfo = thisVariable->second;
+                    iden1className = thisVariableInfo.type.objectClassName;
+                    offset1 = thisVariableInfo.offset;
+                    iden1IsFound = 1;
                 }
                 else
                 {
+                    offset1 += 4 * ( currentClass->second.members->size() );
                 }
             }
-            else
+        }
+
+        // std::cout << " # iden1className = " << iden1className << std::endl;
+        // std::cout << " # currentClass = " << currentClass->first << std::endl;
+        // std::cout << " # 205; offset2 = " << offset2 << std::endl;
+
+        currentClass = classTable->find(iden1className);
+        auto thisMethod = currentClass->second.methods->find(iden2);
+
+        //else check if iden1 is still a member of the current class
+        if( currentClass != classTable->end() && currentClass->second.methods != NULL )
+        {
+            // std::cout << " # 213; offset2 = " << offset2 << std::endl;
+            thisMethod = currentClass->second.methods->find(iden2);
+            if( thisMethod != currentClass->second.methods->end() )
             {
+                // std::cout << " # 217; offset2 = " << offset2 << std::endl;
+                iden2className = currentClass->first;
+                thisMethodString = thisMethod->first;
+                thisMethodInfo = thisMethod->second;
+                iden2IsFound = 1;
+            }
+        }
+
+        // std::cout << " # 230; offset2 = " << offset2 << std::endl;
+        //else check if iden1 is still a member of the superclass of the current class
+        if( currentClass != classTable->end() )
+        {
+            // std::cout << " # 234; offset2 = " << offset2 << std::endl;
+            std::string currentSuperClassName = currentClass->second.superClassName;
+            currentClass = classTable->find(currentSuperClassName);
+
+            if( currentClass != classTable->end() && currentClass->second.methods != NULL )
+            {
+                // std::cout << " # 240; offset2 = " << offset2 << std::endl;
+                thisMethod = currentClass->second.methods->find(iden2);
+                if( iden2IsFound == 0 && thisMethod != currentClass->second.methods->end() )
+                {
+                    // std::cout << " # 244; offset2 = " << offset2 << std::endl;
+                    iden2className = currentClass->first;
+                    thisMethodString = thisMethod->first;
+                    thisMethodInfo = thisMethod->second;
+                    iden2IsFound = 1;
+                }
+            }
+        }
+        // std::cout << " # 257; offset2 = " << offset2 << std::endl;
+    }
+    else
+    {
+        offset1 = 0;
+
+        currentClass = classTable->find(currentClassName);
+        auto thisMethod = currentClass->second.methods->find(iden2);
+
+        //std::cout << "      # 839; currentClass = " << currentClass->first << std::endl;
+        //std::cout << "      # 840; currentClassName = " << currentClassName << std::endl;
+        //std::cout << "      # 841; iden2className = " << iden2className << std::endl;
+
+        //else check if iden1 is still a member of the current class
+        if( currentClass != classTable->end() && currentClass->second.methods != NULL )
+        {
+            // std::cout << " # 213; offset2 = " << offset2 << std::endl;
+            thisMethod = currentClass->second.methods->find(iden1);
+            if( thisMethod != currentClass->second.methods->end() )
+            {
+                        //std::cout << "      # 839; currentClass = " << currentClass->first << std::endl;
+                        //std::cout << "      # 851; currentClassName = " << currentClassName << std::endl;
+                        //std::cout << "      # 852; iden2className = " << iden2className << std::endl;
+                iden2className = currentClass->first;
+                thisMethodString = thisMethod->first;
+                thisMethodInfo = thisMethod->second;
+                offset1 = 8;  //???
+                iden2IsFound = 1;
+            }
+        }
+
+        // std::cout << " # 230; offset2 = " << offset2 << std::endl;
+        //else check if iden1 is still a member of the superclass of the current class
+        if( currentClass != classTable->end() )
+        {
+            // std::cout << " # 234; offset2 = " << offset2 << std::endl;
+            std::string currentSuperClassName = currentClass->second.superClassName;
+            currentClass = classTable->find(currentSuperClassName);
+
+            if( currentClass != classTable->end() && currentClass->second.methods != NULL )
+            {
+                // std::cout << " # 240; offset2 = " << offset2 << std::endl;
+                thisMethod = currentClass->second.methods->find(iden1);
+                if( iden2IsFound == 0 && thisMethod != currentClass->second.methods->end() )
+                {
+                    // std::cout << " # 244; offset2 = " << offset2 << std::endl;
+                    iden2className = currentClass->first;
+                    thisMethodString = thisMethod->first;
+                    thisMethodInfo = thisMethod->second;
+                    offset1 = 8;  //???
+                    iden2IsFound = 1;
+                }
             }
         }
     }
-
-
 
     //obtain method information
     
@@ -703,6 +756,7 @@ void CodeGenerator::visitMethodCallNode(MethodCallNode* node) {
     //if(node->identifier_2 != NULL)
     //        thisMethod = methods->find(iden2);
 
+    /*
     for( auto it = thisMethod.variables->begin();
             it != thisMethod.variables->end(); it++ )
     {
@@ -723,8 +777,9 @@ void CodeGenerator::visitMethodCallNode(MethodCallNode* node) {
             // }
         }
     }
+    */
 
-    printedOffset = offset-4;
+    //printedOffset = offset-4;
 
     std::cout << "  # MethodCall" << std::endl;
 
@@ -732,27 +787,29 @@ void CodeGenerator::visitMethodCallNode(MethodCallNode* node) {
     std::cout << "  push %ecx" << std::endl;
     std::cout << "  push %edx" << std::endl;
 
+    //int addOffset = 0;
+    int addOffset = 4; //???
+
     if (node->expression_list)
     {
         for(std::list<ExpressionNode*>::reverse_iterator iter = node->expression_list->rbegin();
             iter != node->expression_list->rend(); iter++) 
         {
+            addOffset += 4;
             (*iter)->accept(this);
         }
     }
 
     //std::cout << "  push " << offset << "(%ebp)" << std::endl;
-    std::cout << "  push " << printedOffset << "(%ebp)" << std::endl;
+    std::cout << "  push " << offset1 << "(%ebp)" << std::endl;
+
     if( node->identifier_2 == NULL )
-        std::cout << "  call " << iden1className << "_" << iden1 << std::endl;
+        std::cout << "  call " << iden2className << "_" << iden1 << std::endl;
     else
-        std::cout << "  call " << iden1className << "_" << iden2 << std::endl;
+        std::cout << "  call " << iden2className << "_" << iden2 << std::endl;
     //std::cout << "  add $"<< -offset <<", %esp" << std::endl;
 
-    if(printedOffset == -4)
-        printedOffset = 4;
-
-    std::cout << "  add $"<< printedOffset <<", %esp" << std::endl;
+    std::cout << "  add $"<< addOffset <<", %esp" << std::endl;
     std::cout << "  pop %edx" << std::endl;
     std::cout << "  pop %ecx" << std::endl;
     std::cout << "  xchg (%esp), %eax" << std::endl;
@@ -954,10 +1011,10 @@ void CodeGenerator::visitIntegerLiteralNode(IntegerLiteralNode* node) {
 }
 
 void CodeGenerator::visitBooleanLiteralNode(BooleanLiteralNode* node) {
-    std::cout << "  # BoolLiteral" << std::endl;
+    std::cout << "  # Boolean Literal" << std::endl;
     node->visit_children(this);
     std::cout << "  push $" << node->integer->value << std::endl;
-    std::cout << "  # End BoolLiteral" << std::endl;
+    std::cout << "  # Boolean Literal" << std::endl;
 }
 
 void CodeGenerator::visitNewNode(NewNode* node) {
