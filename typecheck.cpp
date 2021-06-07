@@ -284,20 +284,6 @@ void TypeCheck::visitAssignmentNode(AssignmentNode* node) {
 
     if(node->identifier_2 == NULL)
     {
-        /*
-        if( currentVariableTable->find(iden1) = currentVariableTable->end() )
-        {
-            printf("284: undefined_variable");
-            typeError(undefined_variable);
-        }
-
-        std::map<std::string, VariableInfo>::iterator variableTableSearch = currentVariableTable->find( iden1 );
-
-        leftType = variableTableSearch->second.type.baseType;
-        if ( leftType == bt_object )
-            leftClassName = variableTableSearch->second.type.objectClassName;
-        */
-
         while(true)
         {
             //first, check if iden1 is in the currentVariableTable
