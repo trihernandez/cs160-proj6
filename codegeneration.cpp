@@ -573,6 +573,7 @@ void CodeGenerator::visitMethodCallNode(MethodCallNode* node) {
     VariableTable* currentVariableTable = currentMethodInfo.variables;
 
     int offset1 = 0;
+    int offset3 = -4;  //// ????
 
     int iden1IsVariable = 0;
     int iden1IsFound = 0;
@@ -620,6 +621,7 @@ void CodeGenerator::visitMethodCallNode(MethodCallNode* node) {
                 thisVariableInfo = thisVariable->second;
                 iden1className = thisVariableInfo.type.objectClassName;
                 offset1 = thisVariableInfo.offset;
+                offset3 = 8;
                 iden1IsFound = 1;
             }
         }
@@ -641,6 +643,7 @@ void CodeGenerator::visitMethodCallNode(MethodCallNode* node) {
                     thisVariableInfo = thisVariable->second;
                     iden1className = thisVariableInfo.type.objectClassName;
                     offset1 = thisVariableInfo.offset;
+                    offset3 = 8;
                     iden1IsFound = 1;
                 }
                 else
@@ -800,8 +803,15 @@ void CodeGenerator::visitMethodCallNode(MethodCallNode* node) {
         }
     }
 
-    //std::cout << "  push " << offset << "(%ebp)" << std::endl;
-    std::cout << "  push " << offset1 << "(%ebp)" << std::endl;
+    if(offset3 > -4)
+    {
+        std::cout << "  mov " << offset3 << "(%ebp), %ebx" << std::endl;
+        std::cout << "  push " << offset1 << "(%ebp)" << std::endl;
+    }
+    else
+    {
+        std::cout << "  push " << offset1 << "(%ebp)" << std::endl;
+    }
 
     if( node->identifier_2 == NULL )
         std::cout << "  call " << iden2className << "_" << iden1 << std::endl;
@@ -831,6 +841,7 @@ void CodeGenerator::visitMemberAccessNode(MemberAccessNode* node) {
 
     int offset1 = 0;
     int offset2 = 0;
+    int offset3 = -4;  //// ????
 
     int iden1IsVariable = 0;
     int iden1IsFound = 0;
@@ -870,6 +881,7 @@ void CodeGenerator::visitMemberAccessNode(MemberAccessNode* node) {
                 thisVariableString = thisVariable->first;
                 thisVariableInfo = thisVariable->second;
                 iden1className = thisVariableInfo.type.objectClassName;
+                offset3 = 8; //// ????
                 offset1 = thisVariableInfo.offset;
                 iden1IsFound = 1;
             }
@@ -891,6 +903,7 @@ void CodeGenerator::visitMemberAccessNode(MemberAccessNode* node) {
                     thisVariableString = thisVariable->first;
                     thisVariableInfo = thisVariable->second;
                     iden1className = thisVariableInfo.type.objectClassName;
+                    offset3 = 8; //// ????
                     offset1 = thisVariableInfo.offset;
                     iden1IsFound = 1;
                 }
@@ -956,8 +969,18 @@ void CodeGenerator::visitMemberAccessNode(MemberAccessNode* node) {
 
     std::cout << "  # Member Access " << iden1 << "." << iden2 << std::endl;
 
-    std::cout << "  mov " << offset1 << "(%ebp), %ebx" << std::endl;
-    std::cout << "  push " << offset2 << "(%ebx)" << std::endl;
+    //// ????
+    if(offset3 > -4)
+    {
+        std::cout << "  mov " << offset3 << "(%ebp), %ebx" << std::endl;
+        std::cout << "  mov " << offset1 << "(%ebx), %ebx" << std::endl;
+        std::cout << "  push " << offset2 << "(%ebx)" << std::endl;
+    }
+    else
+    {
+        std::cout << "  mov " << offset1 << "(%ebp), %ebx" << std::endl;
+        std::cout << "  push " << offset2 << "(%ebx)" << std::endl;
+    }
 
     std::cout << "  # End Member Access " << iden1 << "." << iden2 << std::endl;
 
