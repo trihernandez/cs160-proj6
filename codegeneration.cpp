@@ -128,7 +128,6 @@ void CodeGenerator::visitAssignmentNode(AssignmentNode* node) {
 
     int offset1 = 0;
     int offset2 = 0;
-    int printedOffset = 0;
 
     int iden1IsVariable = 0;
     int iden1IsFound = 0;
@@ -267,7 +266,15 @@ void CodeGenerator::visitAssignmentNode(AssignmentNode* node) {
     }
     else
     {
-        std::cout << "  pop " << offset1 << "(%ebp)" << std::endl;
+        if(iden1IsVariable == 0)
+        {
+            std::cout << "  mov 8(%ebp), %ebx" << std::endl;
+            std::cout << "  pop " << offset1 << "(%ebx)" << std::endl;
+        }
+        else
+        {
+            std::cout << "  pop " << offset1 << "(%ebp)" << std::endl;
+        }
     }
 
     std::cout << "  # End Assignment" << std::endl;
@@ -664,6 +671,9 @@ void CodeGenerator::visitMethodCallNode(MethodCallNode* node) {
         {
             //check if iden2 is a method in the superclass of iden1
             std::string iden1superClassName = iden1Class->second.superClassName;
+
+            //iden1className = iden1superClassName;
+
             std::map<std::string, ClassInfo>::iterator iden1superClass = classTable->find(iden1superClassName);
             if( iden1superClass != classTable->end() )
             {
@@ -761,7 +771,6 @@ void CodeGenerator::visitMemberAccessNode(MemberAccessNode* node) {
 
     int offset1 = 0;
     int offset2 = 0;
-    int printedOffset = 0;
 
     int iden1IsVariable = 0;
     int iden1IsFound = 0;
@@ -832,7 +841,7 @@ void CodeGenerator::visitMemberAccessNode(MemberAccessNode* node) {
             }
         }
 
-        iden2 = node->identifier_2->name;
+        //iden2 = node->identifier_2->name;
 
         // std::cout << " # iden1className = " << iden1className << std::endl;
         // std::cout << " # currentClass = " << currentClass->first << std::endl;
@@ -885,12 +894,12 @@ void CodeGenerator::visitMemberAccessNode(MemberAccessNode* node) {
         }
         // std::cout << " # 257; offset2 = " << offset2 << std::endl;
 
-    std::cout << "  # Member Access" << iden1 << "." << iden2 << std::endl;
+    std::cout << "  # Member Access " << iden1 << "." << iden2 << std::endl;
 
     std::cout << "  mov " << offset1 << "(%ebp), %ebx" << std::endl;
     std::cout << "  push " << offset2 << "(%ebx)" << std::endl;
 
-    std::cout << "  # End Member Access" << iden1 << "." << iden2 << std::endl;
+    std::cout << "  # End Member Access " << iden1 << "." << iden2 << std::endl;
 
 }
 
@@ -911,11 +920,23 @@ void CodeGenerator::visitVariableNode(VariableNode* node) {
         offset = currentMethodInfo.variables->at(variable).offset;
         std::cout << "  push " << offset << "(%ebp)" << std::endl;
     }
+    else
+    {
+        std::cout << "  mov 8(%ebp), %ebx" << std::endl;
 
-    if( currentClassInfo.members->find(variable) != currentClassInfo.members->end() )
-    {        
-        offset = currentClassInfo.members->at(variable).offset;
-        std::cout << "  push " << offset << "(%ebp)" << std::endl;
+        auto currentClass = classTable->find(currentClassName);
+        while( currentClass != classTable->end() )
+        {
+            auto thisClassInfo = currentClass->second;
+
+            if( thisClassInfo.members->find(variable) != thisClassInfo.members->end() )
+            {
+                offset = thisClassInfo.members->at(variable).offset;
+                std::cout << "  push " << offset << "(%ebx)" << std::endl;
+            }
+            std::string currentSuperClassName = thisClassInfo.superClassName;
+            currentClass = classTable->find(currentSuperClassName);
+        }
     }
     std::cout << "  # End Variable " << variable << std::endl;
 }
